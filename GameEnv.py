@@ -45,6 +45,8 @@ class Game2048Env(py_environment.PyEnvironment):
     
     def _reset(self):
         self._state = self._initial_state
+        print(self._state)
+        print(self._initial_state)
         self._episode_ended = False
         return ts.restart(np.array(self._state.toIntArray().flatten(), dtype=np.int32))
     
@@ -52,13 +54,14 @@ class Game2048Env(py_environment.PyEnvironment):
         if self._episode_ended:
             return self._reset()
         
-        self._state.performActionIfPossible(Move(action))
+        r = self._state.performActionIfPossible(Move(action))
         if (self._state.tilesAvailable()):
             self._state.placeNewTiles()
-            return ts.transition(np.array(self._state.toIntArray().flatten(), dtype=np.int32), reward = 1, discount=0.9)
+            return ts.transition(np.array(self._state.toIntArray().flatten(), dtype=np.int32), reward = r, discount=0.9)
         else:
             reward = -1
             self._episode_ended = True
             return ts.termination(np.array(self._state.toIntArray().flatten(), dtype=np.int32), reward)
 
-
+    def render(self, mode):
+        return self._state.toIntArray()

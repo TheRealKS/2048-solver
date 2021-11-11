@@ -61,7 +61,8 @@ class Grid2048():
         if (action.name in Move.__members__):
             
             #Basically slice the grid in the direction of the move and merge the slices
-            newgrid = self.cells.copy()
+            newgrid = self.toAbstraction()
+            score_increase = 0
 
             if (action == Move.UP):
                 slices = self.getHorizontalSlices(newgrid)
@@ -78,6 +79,7 @@ class Grid2048():
                             merge += 1
                         elif (a == b and a != None and merge < self._size / 2):
                             sl[j-1] = b * 2
+                            score_increase += sl[j-1]
                             sl[j]= None
                             j = self._size - 1
                             merge += 1
@@ -100,6 +102,7 @@ class Grid2048():
                             merge += 1
                         elif (a == b and a != None and merge < self._size / 2):
                             sl[j+1] = b * 2
+                            score_increase += sl[j+1]
                             sl[j]= None
                             j = 0
                             merge += 1
@@ -122,6 +125,7 @@ class Grid2048():
                             merge += 1
                         elif (a == b and a != None and merge < self._size / 2):
                             sl[j+1] = b * 2
+                            score_increase += sl[j+1]
                             sl[j]= None
                             j = 0
                             merge += 1
@@ -144,6 +148,7 @@ class Grid2048():
                             merge += 1
                         elif (a == b and a != None and merge < self._size / 2):
                             sl[j-1] = b * 2
+                            score_increase += sl[j-1]
                             sl[j]= None
                             j = self._size - 1
                             merge += 1
@@ -151,6 +156,8 @@ class Grid2048():
                             
                     slices[i] = sl
                 self.cells = slices
+            
+            return score_increase
         else:
             raise ValueError("Action invalid")
 
@@ -172,3 +179,11 @@ class Grid2048():
                     t[i][j] = -1
         
         return np.array(t)
+
+    def toAbstraction(self):
+        t = self.cells.copy()
+        for i in range (0, self._size):
+            for j in range(0, self._size):
+                if (t[i][j] == -1):
+                    t[i][j] = None
+        return t

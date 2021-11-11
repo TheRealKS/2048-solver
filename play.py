@@ -24,6 +24,8 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.environments import utils
 
+from move import Move
+
 def compute_avg_return(environment, policy, num_episodes=10):
 
   total_return = 0.0
@@ -42,7 +44,7 @@ def compute_avg_return(environment, policy, num_episodes=10):
   return avg_return.numpy()[0]
 
 
-num_iterations = 10000 # @param {type:"integer"}
+num_iterations = 100 # @param {type:"integer"}
 collect_episodes_per_iteration = 2 # @param {type:"integer"}
 replay_buffer_capacity = 20000 # @param {type:"integer"}
 
@@ -155,3 +157,12 @@ for _ in range(num_iterations):
     print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)
 
+for _ in range(num_iterations):
+  time_step = eval_env.reset()
+  #print(eval_env.py_env.initial_state)
+  print(eval_py_env.render(mode='human'))
+  while not time_step.is_last():
+    action_step = tf_agent.policy.action(time_step)
+    print(Move(action_step.action[0]))
+    time_step = eval_env.step(action_step.action)
+    print(eval_py_env.render(mode='human'))
