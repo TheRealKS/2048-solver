@@ -2,26 +2,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import abc
-import tensorflow as tf
 import numpy as np
 
-from tensorflow.python.types.core import Value
-
-from tf_agents.environments import py_environment
-from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
-from tf_agents.environments import utils
-from tf_agents.specs import array_spec
-from tf_agents.environments import wrappers
-from tf_agents.environments import suite_gym
-from tf_agents.trajectories import time_step as ts
-from grid import Grid2048
+from dm_env import specs
+import dm_env
+from sys import maxsize
 
 from util import generateRandomGrid
 from move import Move
 
-class Game2048Env(py_environment.PyEnvironment):
+class Game2048Env(dm_env.Environment):
     """The main environment in which the game is played."""
 
     def __init__(self, initial_state = None):
@@ -33,35 +23,30 @@ class Game2048Env(py_environment.PyEnvironment):
             self._initial_state = generateRandomGrid()
         self._state = self._initial_state
         
-        self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
-        self._observation_spec = array_spec.BoundedArraySpec(shape=(16,), dtype=np.int32, name='obervation')
-        self._episode_ended = False
+        self._episode_ended = False 
     
     def action_spec(self):
-        return self._action_spec
+        return specs.DiscreteArray(dtype=int, num_values=4, name='action')
     
     def observation_spec(self): 
-        return self._observation_spec
+        return specs.BoundedArray(shape=self._state.shape(), dtype=float, minimum=-1, maximum=maxsize, name='board')
     
-    def _reset(self):
-        self._state = self._initial_state
-        print(self._state)
-        print(self._initial_state)
+    def reset(self):
         self._episode_ended = False
-        return ts.restart(np.array(self._state.toIntArray().flatten(), dtype=np.int32))
+        self._state = self._initial_state
+        return dm_env.restart(self._state.toFloatArray())
     
-    def _step(self, action):
+    def step(self, action):
         if self._episode_ended:
-            return self._reset()
+            return self.reset()
         
         r = self._state.performActionIfPossible(Move(action))
         if (self._state.tilesAvailable()):
             self._state.placeNewTiles()
-            return ts.transition(np.array(self._state.toIntArray().flatten(), dtype=np.int32), reward = r, discount=0.9)
+            return dm_env.transition(reward=r, observation=self._state.toFloatArray())
         else:
-            reward = -1
             self._episode_ended = True
-            return ts.termination(np.array(self._state.toIntArray().flatten(), dtype=np.int32), reward)
+            return dm_env.termination(reward=0, observation=self._state.toFloatArray())
 
-    def render(self, mode):
+    def render(self):
         return self._state.toIntArray()

@@ -180,6 +180,9 @@ class Grid2048():
         
         return np.array(t)
 
+    def toFloatArray(self):
+        return self.toIntArray().astype(np.float64)
+
     def toAbstraction(self):
         t = self.cells.copy()
         for i in range (0, self._size):
@@ -187,3 +190,6 @@ class Grid2048():
                 if (t[i][j] == -1):
                     t[i][j] = None
         return t
+
+    def shape(self):
+        return self.toIntArray().shape
