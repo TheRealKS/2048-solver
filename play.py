@@ -13,7 +13,8 @@ env = Game2048Env()
 environment_spec = specs.make_environment_spec(env)
 
 #Create agent
-num_dimensions = np.prod(environment_spec.actions.shape, dtype=int)
+num_dimensions = np.prod(environment_spec.actions.shape, dtype=np.int32)
+print(environment_spec.rewards)
 
 # Create the shared observation network; here simply a state-less operation.
 observation_network = tf2_utils.batch_concat
@@ -44,4 +45,4 @@ agent = dqn.DQN(environment_spec=environment_spec,
 env_loop = environment_loop.EnvironmentLoop(
     env, agent, logger=env_loop_logger)
 
-env_loop.run(10)
+env_loop.run(1)

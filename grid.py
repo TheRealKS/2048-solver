@@ -17,19 +17,13 @@ class Grid2048():
         self.cells = self.buildEmptyGrid()
     
     def buildEmptyGrid(self):
-        cells = []
-        for i in range(0,self._size):
-            row = []
-            for j in range(0,self._size):
-                row.append(None)
-            cells.append(row)
-        return cells
+        return np.zeros((4, 4), dtype='int')
         
     #Is there a tile available?
     def tilesAvailable(self):
         for i in range(0,self._size):
             for j in range(0,self._size):
-                if (self.cells[i][j] == None):
+                if (self.cells[i][j] == 0):
                     return True
         return False
 
@@ -46,9 +40,7 @@ class Grid2048():
 
     #Add random tile to the grid
     def addRandomTile(self):
-        tile = self.tilesAvailable()
-        if (tile == False):
-            #Game over
+        if not self.tilesAvailable():
             return False
         
         tilevalue = choice(self._newtile_opt)
@@ -59,129 +51,54 @@ class Grid2048():
     def performActionIfPossible(self, action):
 
         if (action.name in Move.__members__):
-            
-            #Basically slice the grid in the direction of the move and merge the slices
-            newgrid = self.toAbstraction()
-            score_increase = 0
 
-            if (action == Move.UP):
-                slices = self.getHorizontalSlices(newgrid)
-                merge = 0
-                for i in range(0, self._size):
-                    sl = list(slices[i])
-                    j = self._size - 1
-                    while (j > 0):
-                        a = sl[j]
-                        b = sl[j-1]
-                        if (b == None):
-                            sl[j-1] = a
-                            sl[j] = None
-                            merge += 1
-                        elif (a == b and a != None and merge < self._size / 2):
-                            sl[j-1] = b * 2
-                            score_increase += sl[j-1]
-                            sl[j]= None
-                            j = self._size - 1
-                            merge += 1
-                        j -= 1
-                            
-                    slices[i] = tuple(sl)
-                self.cells = self.convertHorizontalSlicesToGrid(slices)
-            elif (action == Move.DOWN):
-                slices = self.getHorizontalSlices(newgrid)
-                merge = 0
-                for i in range(0, self._size):
-                    sl = list(slices[i])
-                    j = 0
-                    while (j < self._size - 1):
-                        a = sl[j]
-                        b = sl[j+1]
-                        if (b == None):
-                            sl[j+1] = a
-                            sl[j] = None
-                            merge += 1
-                        elif (a == b and a != None and merge < self._size / 2):
-                            sl[j+1] = b * 2
-                            score_increase += sl[j+1]
-                            sl[j]= None
-                            j = 0
-                            merge += 1
-                        j += 1
-                            
-                    slices[i] = tuple(sl)
-                self.cells = self.convertHorizontalSlicesToGrid(slices)
-            elif (action == Move.RIGHT):
-                slices = newgrid
-                merge = 0
-                for i in range(0, self._size):
-                    sl = list(slices[i])
-                    j = 0
-                    while (j < self._size - 1):
-                        a = sl[j]
-                        b = sl[j+1]
-                        if (b == None):
-                            sl[j+1] = a
-                            sl[j] = None
-                            merge += 1
-                        elif (a == b and a != None and merge < self._size / 2):
-                            sl[j+1] = b * 2
-                            score_increase += sl[j+1]
-                            sl[j]= None
-                            j = 0
-                            merge += 1
-                        j += 1
-                            
-                    slices[i] = sl
-                self.cells = slices
-            elif (action == Move.LEFT):
-                slices = newgrid
-                merge = 0
-                for i in range(0, self._size):
-                    sl = list(slices[i])
-                    j = self._size - 1
-                    while (j > 0):
-                        a = sl[j]
-                        b = sl[j-1]
-                        if (b == None):
-                            sl[j-1] = a
-                            sl[j] = None
-                            merge += 1
-                        elif (a == b and a != None and merge < self._size / 2):
-                            sl[j-1] = b * 2
-                            score_increase += sl[j-1]
-                            sl[j]= None
-                            j = self._size - 1
-                            merge += 1
-                        j -= 1
-                            
-                    slices[i] = sl
-                self.cells = slices
-            
-            return score_increase
+            sum_merges = 0
+            board = self.toIntArray()
+            board = self.transform_board(self.cells, action, True)
+            for i in range(board.shape[0]):
+                row = board[i]
+                non_zero = list(row[row != 0])
+                j = 0
+                while j < len(non_zero) - 1:
+                    if non_zero[j] == non_zero[j + 1]:
+                        non_zero[j] += non_zero[j + 1]
+                        sum_merges += non_zero[j]
+                        del non_zero[j + 1]
+                    j += 1
+                row = non_zero + [0]*(4 - len(non_zero))
+                board[i, :] = row
+            self.cells = self.transform_board(board, action, False)
+            return sum_merges
+
         else:
             raise ValueError("Action invalid")
 
-    def placeNewTiles(self):
-        for i in range(0,2):
-            self.addRandomTile()
-
-    def getHorizontalSlices(self, grid):
-        return list(zip(*grid))
-
-    def convertHorizontalSlicesToGrid(self, grid):
-        return [list(a) for a in list(zip(*grid))]
+    @staticmethod
+    def transform_board(board: np.array, direction : Move, forward: bool) -> np.array:
+        board = np.array(board)
+        if forward:
+            if (direction == Move.UP or direction == Move.DOWN):
+                board = board.T
+            if (direction == Move.DOWN or direction == Move.RIGHT):
+                board = board[:, ::-1]
+        else:
+            if (direction == Move.DOWN or direction == Move.RIGHT):
+                board = board[:, ::-1]
+            if (direction == Move.UP or direction == Move.DOWN):
+                board = board.T
+        return board    
 
     def toIntArray(self):
         t = self.cells.copy()
         for i in range(0, self._size):
             for j in range(0, self._size):
                 if (t[i][j] == None):
-                    t[i][j] = -1
+                    t[i][j] = 0
         
         return np.array(t)
 
     def toFloatArray(self):
-        return self.toIntArray().astype(np.float64)
+        return self.cells.astype(np.float32)
 
     def toAbstraction(self):
         t = self.cells.copy()
@@ -189,6 +106,16 @@ class Grid2048():
             for j in range(0, self._size):
                 if (t[i][j] == -1):
                     t[i][j] = None
+        return t
+
+    def toFloatAbstraction(self):
+        t = self.cells.copy()
+        for i in range(0, self._size):
+            for j in range(0, self._size):
+                if (t[i][j] == None):
+                    t[i][j] = -1.0
+                else:
+                    t[i][j] = float(t[i][j])
         return t
 
     def shape(self):

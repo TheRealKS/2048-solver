@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from acme.tf.networks import distributional
 
 import numpy as np
 
@@ -26,11 +27,14 @@ class Game2048Env(dm_env.Environment):
         self._episode_ended = False 
     
     def action_spec(self):
-        return specs.DiscreteArray(dtype=int, num_values=4, name='action')
+        return specs.DiscreteArray(dtype=np.int32, num_values=4, name='action')
     
     def observation_spec(self): 
-        return specs.BoundedArray(shape=self._state.shape(), dtype=float, minimum=-1, maximum=maxsize, name='board')
+        return specs.BoundedArray(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float(maxsize), name='board')
     
+    def reward_spec(self):
+        return specs.BoundedArray(dtype=np.double, shape=(), name='reward', minimum=0, maximum=np.double(maxsize))
+
     def reset(self):
         self._episode_ended = False
         self._state = self._initial_state
@@ -40,13 +44,12 @@ class Game2048Env(dm_env.Environment):
         if self._episode_ended:
             return self.reset()
         
-        r = self._state.performActionIfPossible(Move(action))
-        if (self._state.tilesAvailable()):
-            self._state.placeNewTiles()
+        r = np.double(self._state.performActionIfPossible(Move(action)))
+        if (self._state.addRandomTile()):
             return dm_env.transition(reward=r, observation=self._state.toFloatArray())
         else:
             self._episode_ended = True
-            return dm_env.termination(reward=0, observation=self._state.toFloatArray())
+            return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
 
     def render(self):
         return self._state.toIntArray()
