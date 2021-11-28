@@ -9,11 +9,9 @@ def printCells(cells):
         print("")
 
 g = Grid2048()
-g.cells[0][0] = None
-g.cells[1][0] = 2
-g.cells[2][0] = None
-g.cells[3][0] = 2
-printCells(g.cells)
-print("")
-g.performActionIfPossible(Move.RIGHT)
-printCells(g.cells)
+g.cells = [[ 2,  4,  8,  2],
+            [ 8, 16,  2,  4],
+            [ 4,  8, 16, 32],
+            [ 2,  4,  8, 32]]
+
+print(g.movesAvailable())

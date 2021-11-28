@@ -21,23 +21,33 @@ class Grid2048():
         
     #Is there a tile available?
     def tilesAvailable(self):
-        for i in range(0,self._size):
-            for j in range(0,self._size):
-                if (self.cells[i][j] == 0):
-                    return True
-        return False
+        return np.any(self.cells == 0)
 
     def randomAvailableTile(self):
         tile = (-1,-1,-1)
         c = 0
-        while tile[2] != None and c != (self._size ** 2):
+        while tile[2] != 0 and c != (self._size ** 2):
             x = randint(0,self._size-1)
             y = randint(0,self._size-1)
             tile = (x,y,self.cells[x][y])
             c +=1 
 
         return tile
-
+    
+    def movesAvailable(self):
+        for i in range(0,self._size):
+            for j in range(0,self._size):
+                for r in [-1, 1]:
+                    if 0 <= i+r < self._size:
+                        if self.cells[i][j] == self.cells[i+r][j]:
+                            #print(str(i) + "," + str(j) + "=" + str(i+r) + "," + str(j))
+                            return True
+                    if 0 <= j+r < self._size:
+                        if self.cells[i][j] == self.cells[i][j+r]:
+                            #print(str(i) + "," + str(j) + "=" + str(i) + "," + str(j+r))
+                            return True
+        return False
+        
     #Add random tile to the grid
     def addRandomTile(self):
         if not self.tilesAvailable():

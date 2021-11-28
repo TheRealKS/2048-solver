@@ -47,6 +47,8 @@ class Game2048Env(dm_env.Environment):
         r = np.double(self._state.performActionIfPossible(Move(action)))
         if (self._state.addRandomTile()):
             return dm_env.transition(reward=r, observation=self._state.toFloatArray())
+        elif (self._state.movesAvailable()):
+            return dm_env.transition(reward=1.0, observation=self._state.toFloatArray())
         else:
             self._episode_ended = True
             return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())

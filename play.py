@@ -4,8 +4,10 @@ from acme.agents.tf import dqn
 from acme.tf import networks
 from acme.tf import utils as tf2_utils
 from acme.utils import loggers
+from acme.agents.tf import d4pg
 import numpy as np
 import sonnet as snt
+import acme
 
 from GameEnv import Game2048Env 
 
@@ -14,35 +16,36 @@ environment_spec = specs.make_environment_spec(env)
 
 #Create agent
 num_dimensions = np.prod(environment_spec.actions.shape, dtype=np.int32)
-print(environment_spec.rewards)
 
-# Create the shared observation network; here simply a state-less operation.
-observation_network = tf2_utils.batch_concat
-
-# Create the deterministic policy network.
-policy_network = snt.Sequential([
-    networks.LayerNormMLP((256, 256, 256), activate_final=True),
-    networks.NearZeroInitializedLinear(num_dimensions),
-    networks.TanhToSpec(environment_spec.actions),
+network = snt.Sequential([
+    snt.Flatten(),
+    snt.nets.MLP([50, 50, environment_spec.actions.num_values])
 ])
 
-# Create the distributional critic network.
-critic_network = snt.Sequential([
-    # The multiplexer concatenates the observations/actions.
-    networks.CriticMultiplexer(),
-    networks.LayerNormMLP((512, 512, 256), activate_final=True),
-    networks.DiscreteValuedHead(vmin=-150., vmax=150., num_atoms=51),
-])
+# Construct the agent.
+agent = dqn.DQN(
+    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'))
 
-agent_logger = loggers.TerminalLogger(label='agent', time_delta=10.)
-env_loop_logger = loggers.TerminalLogger(label='env_loop', time_delta=10.)
+def compute_avg_return(environment, policy, num_episodes=10):
 
-agent = dqn.DQN(environment_spec=environment_spec,
-  network=policy_network,
-  logger=agent_logger,
-  checkpoint=False)
+  total_return = 0.0
+  for _ in range(num_episodes):
 
-env_loop = environment_loop.EnvironmentLoop(
-    env, agent, logger=env_loop_logger)
+    time_step = environment.reset()
+    episode_return = 0.0
 
-env_loop.run(1)
+    while not time_step.is_last():
+      action_step = policy.action(time_step)
+      time_step = environment.step(action_step.action)
+      episode_return += time_step.reward
+    total_return += episode_return
+
+  avg_return = total_return / num_episodes
+  return avg_return.numpy()[0]
+
+
+# Run the environment loop.
+logger = loggers.TerminalLogger()
+loop = acme.EnvironmentLoop(env, agent, logger=logger)
+loop.run(num_episodes=10000)  # pytype: disable=attribute-error
+
