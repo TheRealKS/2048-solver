@@ -8,6 +8,7 @@ import numpy as np
 from dm_env import specs
 import dm_env
 from sys import maxsize
+from grid import Grid2048
 
 from util import generateRandomGrid
 from move import Move
@@ -15,13 +16,14 @@ from move import Move
 class Game2048Env(dm_env.Environment):
     """The main environment in which the game is played."""
 
-    def __init__(self, initial_state = None):
+    def __init__(self, initial_state : Grid2048 = None):
         super().__init__()
 
         self._initial_state = initial_state
         if (initial_state == None):
             #Generate a random environment.
             self._initial_state = generateRandomGrid()
+        self._initial_state_grid = self._initial_state.cells
         self._state = self._initial_state
         
         self._episode_ended = False 
@@ -37,7 +39,7 @@ class Game2048Env(dm_env.Environment):
 
     def reset(self):
         self._episode_ended = False
-        self._state = self._initial_state
+        self._state.cells = self._initial_state_grid.copy()
         return dm_env.restart(self._state.toFloatArray())
     
     def step(self, action):
@@ -46,10 +48,13 @@ class Game2048Env(dm_env.Environment):
         
         r = np.double(self._state.performActionIfPossible(Move(action)))
         if (self._state.addRandomTile()):
+            #print("r=" + str(r))
             return dm_env.transition(reward=r, observation=self._state.toFloatArray())
         elif (self._state.movesAvailable()):
+            #print("r=1")
             return dm_env.transition(reward=1.0, observation=self._state.toFloatArray())
         else:
+            #print("r=0")
             self._episode_ended = True
             return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
 

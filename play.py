@@ -11,6 +11,8 @@ import acme
 
 from GameEnv import Game2048Env 
 
+num_episodes = 1
+
 env = Game2048Env()
 environment_spec = specs.make_environment_spec(env)
 
@@ -26,26 +28,28 @@ network = snt.Sequential([
 agent = dqn.DQN(
     environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'))
 
-def compute_avg_return(environment, policy, num_episodes=10):
+def compute_avg_return(environment : Game2048Env, agent: dqn.DQN):
 
-  total_return = 0.0
-  for _ in range(num_episodes):
+  total_return = np.empty(num_episodes)
+  for i in range(num_episodes):
 
     time_step = environment.reset()
     episode_return = 0.0
 
-    while not time_step.is_last():
-      action_step = policy.action(time_step)
-      time_step = environment.step(action_step.action)
+    while not time_step.last():
+      action_step = agent.select_action(time_step.observation)
+      time_step = environment.step(action_step)
       episode_return += time_step.reward
-    total_return += episode_return
+    total_return[i] = episode_return
 
-  avg_return = total_return / num_episodes
-  return avg_return.numpy()[0]
+  return total_return
 
 
 # Run the environment loop.
 logger = loggers.TerminalLogger()
 loop = acme.EnvironmentLoop(env, agent, logger=logger)
-loop.run(num_episodes=10000)  # pytype: disable=attribute-error
+loop.run(num_episodes=num_episodes)
+print(compute_avg_return(env, agent))
+
+
 
