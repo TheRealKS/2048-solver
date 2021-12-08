@@ -4,7 +4,6 @@
 from random import choice, randint
 import numpy as np
 
-from tensorflow.python.types.core import Value
 from move import Move
 
 class Grid2048():
@@ -16,13 +15,15 @@ class Grid2048():
         #Build empty grid
         self.cells = self.buildEmptyGrid()
     
+    """Build empy grid with all zero values - this is not the same as a random grid"""
     def buildEmptyGrid(self):
         return np.zeros((4, 4), dtype='int')
         
-    #Is there a tile available?
+    """Returns true if an empty tile is available"""
     def tilesAvailable(self):
         return np.any(self.cells == 0)
 
+    """Get the coordinates for a random available tile"""
     def randomAvailableTile(self):
         tile = (-1,-1,-1)
         c = 0
@@ -33,7 +34,8 @@ class Grid2048():
             c +=1 
 
         return tile
-    
+
+    """Returns true if a move is available. I.e., all tiles are filed, but it is possible to merge two tiles"""
     def movesAvailable(self):
         for i in range(0,self._size):
             for j in range(0,self._size):
@@ -48,7 +50,7 @@ class Grid2048():
                             return True
         return False
         
-    #Add random tile to the grid
+    """Add a random tile to the grid (2 or 4)"""
     def addRandomTile(self):
         if not self.tilesAvailable():
             return False
@@ -57,7 +59,11 @@ class Grid2048():
         tilepos = self.randomAvailableTile()
         self.cells[tilepos[0]][tilepos[1]] = tilevalue
         return True
-        
+    
+    """
+    Perform a move if it is possible. If move is not possible, will do nothing. If move is possible, will return the sum of all the merges made in the move
+    action must be a valid member of Move enum
+    """
     def performActionIfPossible(self, action):
 
         if (action.name in Move.__members__):
@@ -83,6 +89,9 @@ class Grid2048():
         else:
             raise ValueError("Action invalid")
 
+    """
+    Transform the board to merge tiles in given direction.
+    """
     @staticmethod
     def transform_board(board: np.array, direction : Move, forward: bool) -> np.array:
         board = np.array(board)
@@ -97,6 +106,10 @@ class Grid2048():
             if (direction == Move.UP or direction == Move.DOWN):
                 board = board.T
         return board    
+
+    """
+    Utility methods
+    """
 
     def toIntArray(self):
         t = self.cells.copy()

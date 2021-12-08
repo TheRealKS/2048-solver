@@ -42,17 +42,21 @@ class Game2048Env(dm_env.Environment):
         self._state.cells = self._initial_state_grid.copy()
         return dm_env.restart(self._state.toFloatArray())
     
+    """Single step function"""
     def step(self, action):
         if self._episode_ended:
             return self.reset()
-        
+            
         r = np.double(self._state.performActionIfPossible(Move(action)))
+        # Check if there is an empty tile and add a random tile if that is possible
         if (self._state.addRandomTile()):
             #print("r=" + str(r))
             return dm_env.transition(reward=r, observation=self._state.toFloatArray())
+        # Couldn't add a random tile; check if it is possible to merge tiles
         elif (self._state.movesAvailable()):
             #print("r=1")
             return dm_env.transition(reward=1.0, observation=self._state.toFloatArray())
+        # Game over
         else:
             #print("r=0")
             self._episode_ended = True

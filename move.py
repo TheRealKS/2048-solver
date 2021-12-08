@@ -1,5 +1,8 @@
 from enum import Enum
 
+"""
+Move enum
+"""
 class Move(Enum):
     UP = 0
     DOWN = 1
