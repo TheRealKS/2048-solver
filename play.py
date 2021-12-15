@@ -10,7 +10,8 @@ import sonnet as snt
 import acme
 import tensorflow as tf
 
-from GameEnv import Game2048Env 
+from GameEnv import Game2048Env
+from move import Move 
 
 num_episodes = 10
 
@@ -37,4 +38,10 @@ loop = acme.EnvironmentLoop(env, agent, logger=logger)
 loop.run(num_episodes=num_episodes)
 print(logger.data)
 
-
+timestep = env.reset()
+f = open("run.txt", "w")
+while not timestep.last():
+  action = agent.select_action(timestep.observation)
+  timestep = env.step(action)
+  f.write(str(Move(action)) + "\n")
+  f.write(str(env._state.toIntArray()) + "\n")

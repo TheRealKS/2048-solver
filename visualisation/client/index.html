@@ -2,10 +2,11 @@
     <head>
         <title>2048 REINFORCE</title>
         <link rel="stylesheet" href="index.css">
+        <script src="connection.js"></script>
     </head>
     <body>
-        <div class="game_grid_container">
-            <table class="game_grid">
+        <div class="game_grid_container" id="grid_container">
+            <table class="game_grid" id="game_grid">
                 <tr>
                     <td class="game_tile">2</td>
                     <td class="game_tile">2048</td>
@@ -31,13 +32,19 @@
                     <td class="game_tile">2048</td> 
                 </tr>   
             </table>
-            <button>Move back</button>
-            <button>Move forward</button>
+            <button id="stepBackward">Move back</button>
+            <button id="stepForward">Move forward</button>
         </div>  
         <div class="game_episodes_container">
-            <div class="game_episodes">
-                - RIGHT
-                - HEllo
+            <div class="game_episodes" id="episodes">
+                <input type="file" onchange="read(this);">
+                <!--
+                <div class="timestep">
+                    1:
+                    <div class="dot green"></div>
+                    UP
+                </div>
+                !-->
             </div>
         </div>
 
