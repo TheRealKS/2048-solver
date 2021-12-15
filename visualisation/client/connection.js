@@ -164,13 +164,15 @@ function selectTimestep(index, update, first) {
     if (update === void 0) { update = false; }
     if (first === void 0) { first = false; }
     if (index >= 0 && index < numtimesteps) {
-        document.getElementById("timestep_" + index.toString()).classList.add("timestep_active");
+        var newcurrent = document.getElementById("timestep_" + index.toString());
+        newcurrent.classList.add("timestep_active");
         if (!first) {
             document.getElementById("timestep_" + currentTimestep.toString()).classList.remove("timestep_active");
         }
         document.getElementById("game_grid").remove();
         var gridcontainer = document.getElementById("grid_container");
         gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state), gridcontainer.firstChild);
+        newcurrent.scrollIntoView({ block: "center" });
     }
     if (update) {
         currentTimestep = index;

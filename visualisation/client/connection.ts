@@ -125,7 +125,8 @@ function buildTimeStepUIElement(index : number, move : number, corr = true) {
 
 function selectTimestep(index : number, update = false, first = false) {
     if (index >= 0 && index < numtimesteps) {
-        document.getElementById("timestep_" + index.toString()).classList.add("timestep_active");
+        let newcurrent = document.getElementById("timestep_" + index.toString());
+        newcurrent.classList.add("timestep_active");
         if (!first) {
             document.getElementById("timestep_" + currentTimestep.toString()).classList.remove("timestep_active");
         }
@@ -133,6 +134,8 @@ function selectTimestep(index : number, update = false, first = false) {
         document.getElementById("game_grid").remove();
         let gridcontainer = document.getElementById("grid_container");
         gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state), gridcontainer.firstChild);
+
+        newcurrent.scrollIntoView({block: "center"})
     }
     if (update) {
         currentTimestep = index;
