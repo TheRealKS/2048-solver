@@ -11,11 +11,12 @@ import acme
 import tensorflow as tf
 
 from GameEnv import Game2048Env
+from GameEnvStrategy import Game2048StratEnv
 from move import Move 
 
-num_episodes = 10
+num_episodes = 100
 
-env = Game2048Env()
+env = Game2048StratEnv()
 environment_spec = specs.make_environment_spec(env)
 
 #Create agent

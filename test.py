@@ -9,9 +9,13 @@ def printCells(cells):
         print("")
 
 g = Grid2048()
-g.cells = [[ 2,  4,  8,  2],
-            [ 8, 16,  2,  4],
-            [ 4,  8, 16, 32],
-            [ 2,  4,  8, 32]]
+g.cells = [[ 2,  2,  4,  2],
+            [ 16, 2,  32,  4],
+            [ 2,  128, 2, 8],
+            [ 0,  4, 32, 2]]
+print(g.toIntArray())
 
-print(g.movesAvailable())
+g.performActionIfPossible(Move.UP)
+g.addRandomTile()
+print("")
+print(g.toIntArray()) 
