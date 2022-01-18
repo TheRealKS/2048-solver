@@ -66,7 +66,7 @@ function read(input) {
                     buildingArray = 0;
                     arr = [];
                     for (_i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
-                        l = lines_1[_i];
+                        l = lines_1[_i].trim();
                         if (l.startsWith("Move")) {
                             m = l.split(".")[1];
                             state = {

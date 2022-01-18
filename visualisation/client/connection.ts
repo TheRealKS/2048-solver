@@ -30,7 +30,8 @@ async function read(input) {
 
     var buildingArray = 0;
     var arr : Array<Array<Number>> = [];
-    for (var l of lines) {
+    for (var line of lines) {
+        var l = line.trim();
         if (l.startsWith("Move")) {
             let m = l.split(".")[1]
             state = {
