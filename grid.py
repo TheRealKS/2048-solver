@@ -70,7 +70,7 @@ class Grid2048():
     Perform a move if it is possible. If move is not possible, will do nothing. If move is possible, will return the sum of all the merges made in the move
     action must be a valid member of Move enum
     """
-    def performActionIfPossible(self, action, override=False):
+    def performActionIfPossible(self, action, savestate = True, override=False):
 
         if (action.name in Move.__members__):
 
@@ -97,7 +97,9 @@ class Grid2048():
                     j += 1
                 row = non_zero + [0]*(4 - len(non_zero))
                 board[i, :] = row
-            self.cells = self.transform_board(board, action, False)
+
+            if (savestate):
+                self.cells = self.transform_board(board, action, False)
 
             #If the move did nothing, report this
             if (np.array_equiv(self.cells, prev_state)):

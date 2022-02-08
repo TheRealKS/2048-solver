@@ -1,0 +1,107 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from tkinter import E
+from acme.tf.networks import distributional
+
+import numpy as np
+
+from dm_env import specs
+import dm_env
+from sys import maxsize
+from grid import Grid2048
+from shieldenvironment import ShieldEnvironment, ShieldTimeStep, handover_shield, restart_shield, termination_shield, transition_shield
+
+from util import generateRandomGrid
+from move import Move
+
+INTERVENE_PENALTY_DIVISOR = 10
+
+class Game2048ProtagonistEnv(ShieldEnvironment):
+    """The main environment in which the game is played. For the shield"""
+
+    def __init__(self, initial_state : Grid2048 = None):
+        super().__init__()
+
+        self._initial_state = initial_state
+        if (initial_state == None):
+            #Generate a random environment.
+            self._initial_state = generateRandomGrid()
+        self._initial_state_grid = self._initial_state.cells
+        self._state = self._initial_state
+        
+        self._episode_ended = False 
+        self.prev_action = -1
+    
+    def action_spec(self):
+        return specs.DiscreteArray(dtype=np.int32, num_values=5, name='action')
+    
+    def observation_spec(self): 
+        return specs.BoundedArray(shape=(2,), dtype=np.float32, minimum=-1.0, maximum=float(maxsize), name='observation')
+    
+    def reward_spec(self):
+        return specs.BoundedArray(dtype=np.double, shape=(), name='reward', minimum=0, maximum=np.double(maxsize))
+
+    def reset(self):
+        self._episode_ended = False
+        self._state.cells = self._initial_state_grid.copy()
+        return restart_shield(self._state.toFloatArray())
+    
+    """Single step function"""
+    def shieldstep(self, protagonist_action, reward, prev_state : Grid2048, next_state) -> ShieldTimeStep:
+        if self._episode_ended:
+            return self.reset()
+            
+        #Evaluate the move that the protagonist made
+        moves = next_state.movesAvailableInDirection()
+        if (len(moves) > 0):
+            if (reward == -1.0):
+                #Protagonist move did nothing; check if there is a different move
+                if (moves.includes("h",1) or moves.includes("v",-1)):
+                    #We could have done a strategic move. Perform this action and 
+                    down_reward = prev_state.performActionIfPossible(Move.DOWN, savestate=False)
+                    left_reward = prev_state.performActionIfPossible(Move.LEFT, savestate=False)
+                    #Do what's optimal (we're trying to help)
+                    if (down_reward >= left_reward):
+                        prev_state.performActionIfPossible(Move.DOWN)
+                        return transition_shield(p_reward=0.0, s_reward=down_reward, observation=prev_state.toFloatArray(), p_action=protagonist_action, s_action=Move.DOWN)
+                    else:
+                        prev_state.performActionIfPossible(Move.LEFT)
+                        return transition_shield(p_reward=0.0, s_reward=down_reward, observation=prev_state.toFloatArray(), p_action=protagonist_action, s_action=Move.LEFT)
+            else:
+                #Protagonist move did do something; check if it is a 'dangerous' move
+                if (protagonist_action == Move.DOWN or protagonist_action == Move.LEFT):
+                    #These are valid strategic moves, so we don't care
+                    return transition_shield(p_reward=reward, s_reward=1.0, observation=next_state, p_action=protagonist_action, s_action=protagonist_action)
+                else:
+                    #These are potentially dangerous moves, so we have to check if they are not stupid
+                    if (moves.includes("h",1) or moves.includes("v",-1)):
+                        #We could have also made a strategic move. So correct the protagonist.
+                        down_reward = prev_state.performActionIfPossible(Move.DOWN, savestate=False)
+                        left_reward = prev_state.performActionIfPossible(Move.LEFT, savestate=False)
+                        #Do what's optimal (we're trying to help)
+                        if (down_reward >= left_reward):
+                            prev_state.performActionIfPossible(Move.DOWN)
+                            return transition_shield(p_reward=down_reward / INTERVENE_PENALTY_DIVISOR, s_reward=down_reward, observation=prev_state.toFloatArray(), p_action=protagonist_action, s_action=Move.DOWN)
+                        else:
+                            prev_state.performActionIfPossible(Move.LEFT)
+                            return transition_shield(p_reward=down_reward / INTERVENE_PENALTY_DIVISOR, s_reward=down_reward, observation=prev_state.toFloatArray(), p_action=protagonist_action, s_action=Move.LEFT)
+                    else:
+                        #We have no choice but to make a dangerous move
+                        #Refer this to the shields Q network
+                        return handover_shield(prev_state)
+        else:  
+            #Game over
+            final_reward = float(self._state.sumOfTiles())
+            return termination_shield(p_reward=final_reward, s_reward=final_reward, observation=self._state.toFloatArray(), p_action=protagonist_action, s_action=Move.NOTHING)
+
+    """Step function after consulatation of shield"""
+    def step_newaction(self, oldtimestep : ShieldTimeStep, newaction : Move) -> ShieldTimeStep:
+        r = oldtimestep.observation.performActionIfPossible(newaction)
+        if (oldtimestep.protagonist_action == newaction):
+            return transition_shield(p_reward=oldtimestep.protagonist_reward, s_reward=1.0, observation=oldtimestep.observation.toFloatArray(), p_action=newaction, s_action=newaction)
+        else:
+            return transition_shield(p_reward=r / INTERVENE_PENALTY_DIVISOR, s_reward=r, observation=oldtimestep.observation.toFloatArray(), p_action=oldtimestep.protagonist_reward, s_action=newaction)
+
+    def render(self):
+        return self._state.toIntArray()

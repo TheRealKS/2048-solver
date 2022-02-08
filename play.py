@@ -11,7 +11,7 @@ import acme
 import tensorflow as tf
 from keras import layers
 
-from GameEnv import Game2048Env
+from GameEnvProtagonist import Game2048Env
 from GameEnvStrategy import Game2048StratEnv
 from grid import Grid2048
 from move import Move 

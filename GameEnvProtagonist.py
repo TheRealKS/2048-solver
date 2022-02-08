@@ -13,8 +13,8 @@ from grid import Grid2048
 from util import generateRandomGrid
 from move import Move
 
-class Game2048Env(dm_env.Environment):
-    """The main environment in which the game is played."""
+class Game2048ProtagonistEnv(dm_env.Environment):
+    """The main environment in which the game is played. For the protagonist"""
 
     def __init__(self, initial_state : Grid2048 = None):
         super().__init__()
@@ -50,21 +50,7 @@ class Game2048Env(dm_env.Environment):
             
         r = np.double(self._state.performActionIfPossible(Move(action)))
 
-        if (r >= 0.0):
-            if (r == 0 and self.prev_action == action):
-                return dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
-            
-            #We are actually doing stuff thats good. We cannot add a tile if a move was not possible
-            if (self._state.addRandomTile()):
-                self.prev_action = action
-                return dm_env.transition(reward=float(self._state.getStateScore()), observation=self._state.toFloatArray())
+        return dm_env.transition(reward=r, observation=self._state.toFloatArray())
 
-        if (self._state.movesAvailable()):
-            self.prev_action = action
-            return dm_env.transition(reward=-5.0, observation=self._state.toFloatArray())
-        else:
-            print(self._state.highestTile(), self._state.sumOfTiles())
-            return dm_env.termination(reward=float(self._state.sumOfTiles()), observation=self._state.toFloatArray())
-
-    def render(self):
-        return self._state.toIntArray()
+    def getState(self):
+        return self._state.toFloatArray()
