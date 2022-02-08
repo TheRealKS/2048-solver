@@ -1,3 +1,4 @@
+from os import environ
 from acme import environment_loop
 from acme import specs
 from acme.agents.tf import dqn
@@ -16,22 +17,23 @@ from GameEnvStrategy import Game2048StratEnv
 from grid import Grid2048
 from move import Move 
 
-num_episodes = 600
+num_episodes = 10
 
-env = Game2048Env()
+env = Game2048StratEnv()
 environment_spec = specs.make_environment_spec(env)
+print(environment_spec)
 
 #Create agent
 num_dimensions = np.prod(environment_spec.actions.shape, dtype=np.int32)
 
 network = snt.Sequential([
   snt.Flatten(),
-  snt.nets.MLP([50,50,4], activate_final=True)
+  snt.nets.MLP([16,100,100,100,2], activate_final=True)
 ])
 
 # Construct the agent.
 agent = dqn.DQN(
-    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'))
+    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'), epsilon=0.1, discount=0.3, learning_rate=0.2)
 
 # Run the environment loop.
 logger = loggers.InMemoryLogger()
@@ -43,7 +45,7 @@ print(logger.data)
 print("Done, evaluating strategy")
 biggest = 0
 wrun = ""
-for i in range(0,100):
+for i in range(0,10):
   run = ""
   timestep = env.reset()
   while not timestep.last():

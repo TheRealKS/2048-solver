@@ -1,3 +1,4 @@
+import numpy as np
 from grid import Grid2048
 from util import generateRandomGrid
 from move import Move
@@ -8,14 +9,21 @@ def printCells(cells):
             print(str(tile) + ", ", end='')
         print("")
 
-g = Grid2048()
-g.cells = [[ 2,  2,  4,  2],
-            [ 16, 2,  32,  4],
-            [ 2,  128, 2, 8],
-            [ 0,  4, 32, 2]]
-print(g.toIntArray())
+def arr_eq(a, b):
+    for i in range(0, len(a)):
+        #print(a[i])
+        #print(b[i])
+        if (a[i] != b[i]):
+            return False
 
-g.performActionIfPossible(Move.UP)
-g.addRandomTile()
-print("")
-print(g.toIntArray()) 
+    return True
+
+grid = [[  2,  16,   2,  16],
+        [  8, 128,  16,  32],
+        [  4,   8, 128,   8],
+        [  2,   4,   8,   2]]
+
+g = Grid2048()
+g.cells = grid
+print(g.sumOfTiles())
+print(g.movesAvailableInDirection())

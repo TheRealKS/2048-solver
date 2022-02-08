@@ -1,19 +1,23 @@
 """Wrapper for the 2048 grid"""
 
 
-from random import choice, randint
+from random import choice
+from typing_extensions import Annotated
 import numpy as np
 
 from move import Move
+from stratmove import StrategicMove
 
 class Grid2048():
     
-    def __init__(self, size=4, newtile_opt=[2,4]):
+    def __init__(self, size=4, newtile_opt=[2,4], strategic=False):
         self._size = size
         self._newtile_opt = newtile_opt
 
         #Build empty grid
         self.cells = self.buildEmptyGrid()
+
+        self.strategic = strategic
     
     """Build empy grid with all zero values - this is not the same as a random grid"""
     def buildEmptyGrid(self):
@@ -25,30 +29,32 @@ class Grid2048():
 
     """Get the coordinates for a random available tile"""
     def randomAvailableTile(self):
-        tile = (-1,-1,-1)
-        c = 0
-        while tile[2] != 0 and c != (self._size ** 2):
-            x = randint(0,self._size-1)
-            y = randint(0,self._size-1)
-            tile = (x,y,self.cells[x][y])
-            c +=1 
+        tile = np.asarray(self.cells == 0).nonzero()
+        tilelist = list(zip(tile[0],tile[1]))
+        tileidx = choice(tilelist)
 
-        return tile
+        return tileidx
 
     """Returns true if a move is available. I.e., all tiles are filed, but it is possible to merge two tiles"""
     def movesAvailable(self):
+        return len(self.movesAvailableInDirection())> 0
+
+    def movesAvailableInDirection(self):
+        moves = set()
         for i in range(0,self._size):
             for j in range(0,self._size):
                 for r in [-1, 1]:
                     if 0 <= i+r < self._size:
-                        if self.cells[i][j] == self.cells[i+r][j]:
-                            #print(str(i) + "," + str(j) + "=" + str(i+r) + "," + str(j))
-                            return True
+                        if (self.cells[i][j] == self.cells[i+r][j]) and self.cells[i][j] > 0:
+                            moves.add(("v",r))
+                        elif self.cells[i+r][j] == 0 and self.cells[i][j] != 0:
+                            moves.add(("v",r))
                     if 0 <= j+r < self._size:
-                        if self.cells[i][j] == self.cells[i][j+r]:
-                            #print(str(i) + "," + str(j) + "=" + str(i) + "," + str(j+r))
-                            return True
-        return False
+                        if (self.cells[i][j] == self.cells[i][j+r]) and self.cells[i][j] > 0:
+                            moves.add(("h",r))
+                        elif self.cells[i][j+r] == 0 and self.cells[i][j] != 0:
+                            moves.add(("h", r))
+        return moves
         
     """Add a random tile to the grid (2 or 4)"""
     def addRandomTile(self):
@@ -64,9 +70,17 @@ class Grid2048():
     Perform a move if it is possible. If move is not possible, will do nothing. If move is possible, will return the sum of all the merges made in the move
     action must be a valid member of Move enum
     """
-    def performActionIfPossible(self, action):
+    def performActionIfPossible(self, action, override=False):
 
         if (action.name in Move.__members__):
+
+            if (self.strategic and (not action.name in StrategicMove.__members__) and (not override)):
+                return -2.0
+            else:
+                action = Move.__members__[action.name]
+
+            #Save state to compare afterwards
+            prev_state = self.cells.copy()
 
             sum_merges = 0
             board = self.toIntArray()
@@ -84,6 +98,11 @@ class Grid2048():
                 row = non_zero + [0]*(4 - len(non_zero))
                 board[i, :] = row
             self.cells = self.transform_board(board, action, False)
+
+            #If the move did nothing, report this
+            if (np.array_equiv(self.cells, prev_state)):
+                return -1.0
+
             return sum_merges
 
         else:
@@ -111,35 +130,20 @@ class Grid2048():
     Utility methods
     """
 
+    def getStateScore(self):
+        return max(1,len(np.asarray(self.cells==0)))
+
+    def highestTile(self):
+        return self.cells.max()
+
+    def sumOfTiles(self):
+        return np.array(self.toIntArray()).sum()
+
     def toIntArray(self):
-        t = self.cells.copy()
-        for i in range(0, self._size):
-            for j in range(0, self._size):
-                if (t[i][j] == None):
-                    t[i][j] = 0
-        
-        return np.array(t)
+        return self.cells
 
     def toFloatArray(self):
         return self.cells.astype(np.float32)
-
-    def toAbstraction(self):
-        t = self.cells.copy()
-        for i in range (0, self._size):
-            for j in range(0, self._size):
-                if (t[i][j] == -1):
-                    t[i][j] = None
-        return t
-
-    def toFloatAbstraction(self):
-        t = self.cells.copy()
-        for i in range(0, self._size):
-            for j in range(0, self._size):
-                if (t[i][j] == None):
-                    t[i][j] = -1.0
-                else:
-                    t[i][j] = float(t[i][j])
-        return t
 
     def shape(self):
         return self.toIntArray().shape

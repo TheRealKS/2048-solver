@@ -27,6 +27,7 @@ class Game2048Env(dm_env.Environment):
         self._state = self._initial_state
         
         self._episode_ended = False 
+        self.prev_action = -1
     
     def action_spec(self):
         return specs.DiscreteArray(dtype=np.int32, num_values=4, name='action')
@@ -48,19 +49,22 @@ class Game2048Env(dm_env.Environment):
             return self.reset()
             
         r = np.double(self._state.performActionIfPossible(Move(action)))
-        # Check if there is an empty tile and add a random tile if that is possible
-        if (self._state.addRandomTile()):
-            #print("r=" + str(r))
-            return dm_env.transition(reward=r, observation=self._state.toFloatArray())
-        # Couldn't add a random tile; check if it is possible to merge tiles
-        elif (self._state.movesAvailable()):
-            #print("r=1")
-            return dm_env.transition(reward=1.0, observation=self._state.toFloatArray())
-        # Game over
+
+        if (r >= 0.0):
+            if (r == 0 and self.prev_action == action):
+                return dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
+            
+            #We are actually doing stuff thats good. We cannot add a tile if a move was not possible
+            if (self._state.addRandomTile()):
+                self.prev_action = action
+                return dm_env.transition(reward=float(self._state.getStateScore()), observation=self._state.toFloatArray())
+
+        if (self._state.movesAvailable()):
+            self.prev_action = action
+            return dm_env.transition(reward=-5.0, observation=self._state.toFloatArray())
         else:
-            #print("r=0")
-            self._episode_ended = True
-            return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
+            print(self._state.highestTile(), self._state.sumOfTiles())
+            return dm_env.termination(reward=float(self._state.sumOfTiles()), observation=self._state.toFloatArray())
 
     def render(self):
         return self._state.toIntArray()

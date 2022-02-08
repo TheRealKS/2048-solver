@@ -75,7 +75,11 @@ function read(input) {
                             };
                         }
                         else {
-                            numbers = l.substr(2);
+                            if (buildingArray == 0) {
+                                numbers = l.substr(2)
+                            } else {
+                                numbers = l.substr(1);
+                            }
                             if (buildingArray < 3) {
                                 numbers = numbers.substring(0, numbers.length - 1);
                                 lnumbers = numbers.split(" ");
