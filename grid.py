@@ -5,7 +5,7 @@ from random import choice
 from typing_extensions import Annotated
 import numpy as np
 
-from move import Move
+from move import Move, toMoveEnum
 from stratmove import StrategicMove
 
 class Grid2048():
@@ -54,14 +54,15 @@ class Grid2048():
                             moves.add(("h",r))
                         elif self.cells[i][j+r] == 0 and self.cells[i][j] != 0:
                             moves.add(("h", r))
-        return moves
+
+        return set(map(lambda m : toMoveEnum(m), moves))
         
     """Add a random tile to the grid (2 or 4)"""
     def addRandomTile(self):
         if not self.tilesAvailable():
             return False
         
-        tilevalue = choice(self._newtile_opt)
+        tilevalue = np.random.choice(self._newtile_opt, p=[0.9,0.1])
         tilepos = self.randomAvailableTile()
         self.cells[tilepos[0]][tilepos[1]] = tilevalue
         return True

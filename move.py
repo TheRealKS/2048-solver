@@ -9,3 +9,15 @@ class Move(Enum):
     RIGHT = 2
     LEFT = 3
     NOTHING = 4
+
+def toMoveEnum(t):
+    if (t[0] == 'v'):
+        if (t[1] == -1):
+            return Move.UP
+        else:
+            return Move.DOWN
+    else:
+        if (t[1] == -1):
+            return Move.LEFT
+        else:
+            return Move.RIGHT

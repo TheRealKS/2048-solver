@@ -10,35 +10,48 @@ import sonnet as snt
 import acme
 import tensorflow as tf
 from keras import layers
+from EnvironmentLoopShield import ShieldEnvironmentLoop
 
-from GameEnvProtagonist import Game2048Env
-from GameEnvStrategy import Game2048StratEnv
+from GameEnvProtagonist import Game2048ProtagonistEnv
+from GameEnvShield import Game2048ShieldEnv
 from grid import Grid2048
 from move import Move 
 
 num_episodes = 600
 
-env = Game2048Env()
+env = Game2048ProtagonistEnv()
 environment_spec = specs.make_environment_spec(env)
+
+senv = Game2048ShieldEnv()
+shield_environment_spec = specs.make_environment_spec(senv)
 
 #Create agent
 num_dimensions = np.prod(environment_spec.actions.shape, dtype=np.int32)
 
-network = snt.Sequential([
+play_network = snt.Sequential([
   snt.Flatten(),
-  snt.nets.MLP([50,50,4], activate_final=True)
+  snt.nets.MLP([16,50,50,4], activate_final=True)
+])
+
+shield_network = snt.Sequential([
+  snt.Flatten(),
+  snt.nets.MLP([16,50,50,4], activate_final=True)
 ])
 
 # Construct the agent.
 agent = dqn.DQN(
-    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'))
+    environment_spec=environment_spec, network=play_network, logger=loggers.TerminalLogger(label='agent'))
+
+
+shield = dqn.DQN(
+  environment_spec=shield_environment_spec, network=shield_network, logger=loggers.TerminalLogger(label='shield')
+)
 
 # Run the environment loop.
 logger = loggers.InMemoryLogger()
-loop = acme.EnvironmentLoop(env, agent, logger=logger)
+loop = ShieldEnvironmentLoop(play_environment=env, shield_environment=senv, protagonist=agent, shield=shield, logger=logger)
 loop.run(num_episodes=num_episodes)
 print(logger.data)
-
 
 print("Done, evaluating strategy")
 biggest = 0

@@ -11,15 +11,16 @@ import sonnet as snt
 import acme
 import tensorflow as tf
 from keras import layers
+from DQNalt import DQNFeasible
 
-from GameEnvProtagonist import Game2048Env
-from GameEnvStrategy import Game2048StratEnv
+from GameEnvProtagonist import Game2048ProtagonistEnv
 from grid import Grid2048
+from infeasibilitychecker import InfeasibilityChecker
 from move import Move 
 
-num_episodes = 10
+num_episodes = 1000
 
-env = Game2048StratEnv()
+env = Game2048ProtagonistEnv(agent=[])
 environment_spec = specs.make_environment_spec(env)
 print(environment_spec)
 
@@ -28,16 +29,18 @@ num_dimensions = np.prod(environment_spec.actions.shape, dtype=np.int32)
 
 network = snt.Sequential([
   snt.Flatten(),
-  snt.nets.MLP([16,100,100,100,2], activate_final=True)
+  snt.nets.MLP([16,50]),
+  snt.nets.MLP([50,4])
 ])
 
 # Construct the agent.
-agent = dqn.DQN(
-    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'), epsilon=0.1, discount=0.3, learning_rate=0.2)
+agent = DQNFeasible(
+    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'), checker=InfeasibilityChecker(env) ,epsilon=0.3)
+env._agent = agent
 
 # Run the environment loop.
 logger = loggers.InMemoryLogger()
-loop = acme.EnvironmentLoop(env, agent, logger=logger)
+loop = acme.EnvironmentLoop(env, agent, logger=logger, should_update=True)
 loop.run(num_episodes=num_episodes)
 print(logger.data)
 

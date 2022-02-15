@@ -2,6 +2,7 @@
 
 """SHielded agent training loop"""
 
+from asyncio import shield
 from multiprocessing.dummy import current_process
 import operator
 import time
@@ -20,7 +21,7 @@ from grid import Grid2048
 from shieldenvironment import ShieldEnvironment
 
 
-class DoubleEnvironmentLoop(core.Worker):
+class ShieldEnvironmentLoop(core.Worker):
   """
   RL Loop with shielding
 
@@ -81,8 +82,8 @@ class DoubleEnvironmentLoop(core.Worker):
     # For evaluation, this keeps track of the total undiscounted reward
     # accumulated during the episode.
     episode_return = tree.map_structure(_generate_zeros_from_spec,
-                                        self._environment.reward_spec())
-    timestep = self._environment.reset()
+                                        self._play_environment.reward_spec())
+    timestep = self._play_environment.reset()
 
     # Protagonist has the first move
     self._protagonist.observe_first(timestep)
@@ -99,18 +100,19 @@ class DoubleEnvironmentLoop(core.Worker):
 
         #Run through the shield
         shield_verdict = self._shield_environment.shieldstep(action, timestep.reward, prev_state, self._play_environment.getState())
+        print(shield_verdict)
         if (shield_verdict.step_type == dm_env.StepType.HANDOVER):
             newaction = self._shield.select_action(timestep.observation)
             shield_verdict = self._shield_environment.step_newaction(shield_verdict, newaction)
 
         timestep = dm_env.TimeStep(shield_verdict.step_type, reward=shield_verdict.protagonist_reward, observation=shield_verdict.observation, discount=shield_verdict.discount)
-        self._protagonist.observe(shield_verdict.shield_action, next_timestep=timestep)
-        self._shield.observe(shield_verdict.shield_action, next_timestep=timestep)
+        self._protagonist.observe(shield_verdict.shield_action.value, next_timestep=timestep)
+        self._shield.observe(shield_verdict.shield_action.value, next_timestep=timestep)
         if (self._should_update):
             self._protagonist.update()
             self._shield.update()
 
-        episode_return = tree.map_structure(operator.iadd, episode_return, timestep.reward())
+        episode_return = tree.map_structure(operator.iadd, episode_return, timestep.reward)
         
         episode_steps += 1
 
