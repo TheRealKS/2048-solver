@@ -53,7 +53,7 @@ function readFile(file) {
 }
 function read(input) {
     return __awaiter(this, void 0, void 0, function () {
-        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, l, m, numbers, lnumbers, lnumbers;
+        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, line, l, m, numbers, lnumbers, lnumbers;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, readFile(input.files[0])];
@@ -66,7 +66,8 @@ function read(input) {
                     buildingArray = 0;
                     arr = [];
                     for (_i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
-                        l = lines_1[_i].trim();
+                        line = lines_1[_i];
+                        l = line.trim();
                         if (l.startsWith("Move")) {
                             m = l.split(".")[1];
                             state = {
@@ -75,10 +76,9 @@ function read(input) {
                             };
                         }
                         else {
+                            numbers = l.substr(1);
                             if (buildingArray == 0) {
-                                numbers = l.substr(2)
-                            } else {
-                                numbers = l.substr(1);
+                                numbers = numbers.substr(1);
                             }
                             if (buildingArray < 3) {
                                 numbers = numbers.substring(0, numbers.length - 1);
@@ -109,7 +109,7 @@ function initUI() {
     var container = document.getElementById("episodes");
     container.innerHTML = "";
     gameMap.forEach(function (val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.RIGHT));
     });
     selectTimestep(0, true, true);
 }

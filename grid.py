@@ -130,11 +130,40 @@ class Grid2048():
         return board    
 
     """
+    Check what moves are available in current state
+    """
+    @staticmethod
+    def movesAvailableInState(state):
+        size = len(state)
+
+        moves = set()
+        for i in range(0,size):
+            for j in range(0,size):
+                for r in [-1, 1]:
+                    if 0 <= i+r < size:
+                        if (state[i][j] == state[i+r][j]) and state[i][j] > 0:
+                            moves.add(("v",r))
+                        elif state[i+r][j] == 0 and state[i][j] != 0:
+                            moves.add(("v",r))
+                    if 0 <= j+r < size:
+                        if (state[i][j] == state[i][j+r]) and state[i][j] > 0:
+                            moves.add(("h",r))
+                        elif state[i][j+r] == 0 and state[i][j] != 0:
+                            moves.add(("h", r))
+
+        return set(map(lambda m : toMoveEnum(m), moves))
+
+    """
     Utility methods
     """
 
+    def isWellOrdered(self):
+        return self.getStateScore == 8
+
     def getStateScore(self):
-        return max(1,len(np.asarray(self.cells==0)))
+        h = np.count_nonzero(np.all(self.cells[:, 1:] >= self.cells[:, :-1], axis=1))
+        v = np.count_nonzero(np.all(self.cells[1:, :] >= self.cells[:-1, :], axis=0))
+        return h + v
 
     def highestTile(self):
         return self.cells.max()

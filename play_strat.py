@@ -18,7 +18,7 @@ from grid import Grid2048
 from infeasibilitychecker import InfeasibilityChecker
 from move import Move 
 
-num_episodes = 1000
+num_episodes = 150
 
 env = Game2048ProtagonistEnv(agent=[])
 environment_spec = specs.make_environment_spec(env)
@@ -35,7 +35,7 @@ network = snt.Sequential([
 
 # Construct the agent.
 agent = DQNFeasible(
-    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'), checker=InfeasibilityChecker(env) ,epsilon=0.3)
+    environment_spec=environment_spec, network=network, logger=loggers.TerminalLogger(label='agent'), checker=InfeasibilityChecker(env), target_update_period=10, epsilon=0.1, n_step=1, discount=0.6, learning_rate=0.5)
 env._agent = agent
 
 # Run the environment loop.
@@ -57,7 +57,7 @@ for i in range(0,10):
     run += str(Move(action)) + "\n"
     run += str(env._state.toIntArray()) + "\n"
   
-  m = env._state.cells.argmax()
+  m = env._state.cells.max()
   if (m > biggest):
     biggest = m
     wrun = run

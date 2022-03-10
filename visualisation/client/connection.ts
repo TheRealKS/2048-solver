@@ -39,7 +39,10 @@ async function read(input) {
                 state: undefined
             };
         } else {
-            let numbers = l.substr(2);
+            let numbers = l.substr(1);
+            if (buildingArray == 0) {
+                numbers = numbers.substr(1);
+            }
             if (buildingArray < 3) {
                 numbers = numbers.substring(0, numbers.length - 1);
                 let lnumbers = numbers.split(" ");
@@ -67,7 +70,7 @@ function initUI() {
     container.innerHTML = "";
 
     gameMap.forEach(function(val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.RIGHT));
     });
 
     selectTimestep(0, true, true);

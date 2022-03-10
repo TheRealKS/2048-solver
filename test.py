@@ -18,12 +18,11 @@ def arr_eq(a, b):
 
     return True
 
-grid = [[  2,  16,   2,  16],
-        [  8, 128,  16,  32],
-        [  4,   8, 128,   8],
-        [  2,   4,   8,   2]]
+grid = np.array([[  0,  2,   4,  8],
+        [  0, 2,  4,  8],
+        [  2,   2, 4,  8],
+        [  0,   0,   0,   0]])
 
 g = Grid2048()
 g.cells = grid
-print(g.sumOfTiles())
-print(g.movesAvailableInDirection())
+print(g.getStateScore())

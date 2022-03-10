@@ -55,53 +55,41 @@ class Game2048ProtagonistEnv(FeasibleEnvironment):
     def step(self, action):
         if self._episode_ended:
             return self.reset()
-            
-        action = Move(action)
-        r = np.double(self._state.performActionIfPossible(action))
 
-        if (r == -1.0):
+        action = Move(action)
+
+        prevstatescore = self._state.getStateScore()
+
+        r = np.double(self._state.performActionIfPossible(action))
+        newscore = self._state.getStateScore()
+        if (prevstatescore > newscore):
+            if (prevstatescore - newscore > 3):
+                r = 0.0
+
+        if (action == Move.DOWN or action == Move.RIGHT):
+            r *= 2.0
+        else:
+            r = 0.0
+
+        """         if (r == -1.0):
             #Move did nothing, so it doesn't matter. Penalise it
-            #print("PENALTY")
+            print("PENALTY")
             if (self._state.addRandomTile()):
                 return dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
             else:
                 if (self._state.movesAvailable()):
                     return dm_env.transition(reward=-1.0, observation=self._state.toFloatArray())
-                return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
-        else:
-            if (action == Move.UP or action == Move.RIGHT):
-                #print("DANGER")
-                if (not self._state.addRandomTile()):
-                    return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
-
-                #Play a few moves to see what this does
-                self._grid_revert = self._state.cells.copy()
-                timestep = dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
-                for i in range(0,25):
-                    if (not timestep.last()):
-                        a = self._agent.select_action(timestep.observation)
-                        timestep = self.simple_step(a)
-                    else:
-                        break
-                
-                self.revert()
-                moves = self._state.movesAvailableInDirection()
-                if (timestep.last()):
-                    #print("GAMEOVER")
-                    if (len(moves) > 1):
-                        if (not Move.LEFT in moves and not Move.DOWN in moves):
-                            return dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
-                        else:
-                            return dm_env.transition(reward=1.0, observation=self._state.toFloatArray())
-                else:
-                    if (not Move.LEFT in moves and not Move.DOWN in moves):
-                        return dm_env.transition(reward=0.0, observation=self._state.toFloatArray())
-                    else:
-                        return dm_env.transition(reward=r, observation=self._state.toFloatArray())
-        
+                print("terminate", self._state.toIntArray())
+                return dm_env.termination(reward=0.0, observation=self._state.toFloatArray()) """
+        #else:
         if (self._state.addRandomTile()):
-            return dm_env.transition(reward=r, observation=self._state.toFloatArray())
+            if (self._state.isWellOrdered()):
+                return dm_env.transition(reward=r*2.0, observation=self._state.toFloatArray())
+            else:
+                return dm_env.transition(reward=r, observation=self._state.toFloatArray())
         else:
+            print("termination2")
+            print(self._state.toIntArray())
             return dm_env.termination(reward=0.0, observation=self._state.toFloatArray())
 
     def simple_step(self, action):
@@ -114,9 +102,6 @@ class Game2048ProtagonistEnv(FeasibleEnvironment):
     def getState(self):
         return self._state.toFloatArray()
 
-    def obtainFeasibleMoves(self, state):
-        self._grid_revert = self._state.cells.copy()
-        self._state.cells = state
-        moves = self._state.movesAvailableInDirection()
-        self.revert()
-        return moves
+    @staticmethod
+    def obtainFeasibleMoves(state):
+        return Grid2048.movesAvailableInState(state)

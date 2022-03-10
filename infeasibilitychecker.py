@@ -9,4 +9,4 @@ class InfeasibilityChecker:
         moves = self.env.obtainFeasibleMoves(observation)
         #Convert the moves to numeric values
         moves = map(lambda m: m.value, moves)
-        return moves
+        return list(moves)

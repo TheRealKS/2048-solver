@@ -9,6 +9,7 @@ from acme.tf import utils as tf2_utils
 from acme.tf import variable_utils as tf2_variable_utils
 
 import dm_env
+import numpy as np
 import sonnet as snt
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -67,13 +68,16 @@ class FeedForwardInfeasibleActor(core.Actor):
 
     # Pass the observation through the policy network.
     action = tf2_utils.to_numpy_squeeze(self._policy(observation))
+    if (len(feasiblemoves) == 0):
+      return action
+    
     c = 0
     while (int(action) not in feasiblemoves):
         action = tf2_utils.to_numpy_squeeze(self._policy(observation))
         c += 1
         if (c > 10):
-            return action
-    
+          return np.int32(feasiblemoves[0])
+
     return action
 
   def observe_first(self, timestep: dm_env.TimeStep):
