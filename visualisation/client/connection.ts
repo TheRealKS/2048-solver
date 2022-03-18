@@ -5,8 +5,14 @@ enum Move {
     RIGHT
 }
 
+interface Coordinate {
+    x : number,
+    y : number
+}
+
 interface GameState {
     move : Move,
+    tileAdded : Coordinate,
     state : Array<Array<Number>>
 }
 
@@ -36,9 +42,15 @@ async function read(input) {
             let m = l.split(".")[1]
             state = {
                 move: Move[m],
-                state: undefined
+                state: undefined,
+                tileAdded: undefined
             };
-        } else {
+        } else if (l.length == 5 || l.length == 7) {
+            let coords = l.substr(1);
+            coords = coords.substring(0, coords.length - 1);
+            let loosecoords = coords.split(" ");
+            state.tileAdded = {x: parseInt(loosecoords[1]), y: parseInt(loosecoords[0])}
+        } else { 
             let numbers = l.substr(1);
             if (buildingArray == 0) {
                 numbers = numbers.substr(1);
@@ -70,22 +82,25 @@ function initUI() {
     container.innerHTML = "";
 
     gameMap.forEach(function(val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.RIGHT));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT));
     });
 
     selectTimestep(0, true, true);
 }
 
-function buildGridUIElement(grid : Array<Array<Number>>) {
+function buildGridUIElement(grid : Array<Array<Number>>, newtile : Coordinate) {
     let gridel = document.createElement("table");
     gridel.className = "game_grid";
     gridel.id ="game_grid";
 
+    var r = 0
     for (var row of grid) {
         let rowel = document.createElement("tr");
+        var t = 0
         for (var tile of row) {
             let tileel = document.createElement("td");
             tileel.className = "game_tile";
+            if (newtile.x == t && newtile.y == r) tileel.classList.add("outline")
             tileel.innerHTML = tile.toString();
             if (tile < 8 && tile > 0) {
                 tileel.classList.add("tile_low");
@@ -97,8 +112,10 @@ function buildGridUIElement(grid : Array<Array<Number>>) {
                 tileel.classList.add("tile_high");
             }
             rowel.appendChild(tileel);
+            t += 1
         }
         gridel.appendChild(rowel);
+        r += 1
     }
 
     return gridel;
@@ -137,7 +154,7 @@ function selectTimestep(index : number, update = false, first = false) {
 
         document.getElementById("game_grid").remove();
         let gridcontainer = document.getElementById("grid_container");
-        gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state), gridcontainer.firstChild);
+        gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state, gameMap[index].tileAdded), gridcontainer.firstChild);
 
         newcurrent.scrollIntoView({block: "center"})
     }

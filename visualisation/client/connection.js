@@ -53,7 +53,7 @@ function readFile(file) {
 }
 function read(input) {
     return __awaiter(this, void 0, void 0, function () {
-        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, line, l, m, numbers, lnumbers, lnumbers;
+        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, line, l, m, coords, loosecoords, numbers, lnumbers, lnumbers;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, readFile(input.files[0])];
@@ -72,8 +72,15 @@ function read(input) {
                             m = l.split(".")[1];
                             state = {
                                 move: Move[m],
-                                state: undefined
+                                state: undefined,
+                                tileAdded: undefined
                             };
+                        }
+                        else if (l.length == 5 || l.length == 7) {
+                            coords = l.substr(1);
+                            coords = coords.substring(0, coords.length - 1);
+                            loosecoords = coords.split(" ");
+                            state.tileAdded = { x: parseInt(loosecoords[1]), y: parseInt(loosecoords[0]) };
                         }
                         else {
                             numbers = l.substr(1);
@@ -109,21 +116,25 @@ function initUI() {
     var container = document.getElementById("episodes");
     container.innerHTML = "";
     gameMap.forEach(function (val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.RIGHT));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT));
     });
     selectTimestep(0, true, true);
 }
-function buildGridUIElement(grid) {
+function buildGridUIElement(grid, newtile) {
     var gridel = document.createElement("table");
     gridel.className = "game_grid";
     gridel.id = "game_grid";
+    var r = 0;
     for (var _i = 0, grid_1 = grid; _i < grid_1.length; _i++) {
         var row = grid_1[_i];
         var rowel = document.createElement("tr");
+        var t = 0;
         for (var _a = 0, row_1 = row; _a < row_1.length; _a++) {
             var tile = row_1[_a];
             var tileel = document.createElement("td");
             tileel.className = "game_tile";
+            if (newtile.x == t && newtile.y == r)
+                tileel.classList.add("outline");
             tileel.innerHTML = tile.toString();
             if (tile < 8 && tile > 0) {
                 tileel.classList.add("tile_low");
@@ -138,8 +149,10 @@ function buildGridUIElement(grid) {
                 tileel.classList.add("tile_high");
             }
             rowel.appendChild(tileel);
+            t += 1;
         }
         gridel.appendChild(rowel);
+        r += 1;
     }
     return gridel;
 }
@@ -175,7 +188,7 @@ function selectTimestep(index, update, first) {
         }
         document.getElementById("game_grid").remove();
         var gridcontainer = document.getElementById("grid_container");
-        gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state), gridcontainer.firstChild);
+        gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state, gameMap[index].tileAdded), gridcontainer.firstChild);
         newcurrent.scrollIntoView({ block: "center" });
     }
     if (update) {

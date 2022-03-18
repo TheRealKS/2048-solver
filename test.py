@@ -1,5 +1,6 @@
 import numpy as np
 from grid import Grid2048
+from shield import criticalSectionValueAfterMove, findCriticalSection
 from util import generateRandomGrid
 from move import Move
 
@@ -18,11 +19,12 @@ def arr_eq(a, b):
 
     return True
 
-grid = np.array([[  0,  2,   4,  8],
-        [  0, 2,  4,  8],
-        [  2,   2, 4,  8],
-        [  0,   0,   0,   0]])
+grid = np.array([[ 16,   0,  0,  0],
+                [  32,   4,  0,  0],
+                [  64,  16,  2,  4],
+                [  512, 64,  8,  2]])
 
-g = Grid2048()
-g.cells = grid
-print(g.getStateScore())
+r, c = findCriticalSection(grid)
+print(r,c)
+print(criticalSectionValueAfterMove(grid, Move.UP, r, c))
+print(criticalSectionValueAfterMove(grid, Move.RIGHT, r, c))

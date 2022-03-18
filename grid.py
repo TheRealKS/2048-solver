@@ -60,25 +60,22 @@ class Grid2048():
     """Add a random tile to the grid (2 or 4)"""
     def addRandomTile(self):
         if not self.tilesAvailable():
-            return False
+            return False, [-1,-1]
         
         tilevalue = np.random.choice(self._newtile_opt, p=[0.9,0.1])
         tilepos = self.randomAvailableTile()
         self.cells[tilepos[0]][tilepos[1]] = tilevalue
-        return True
+        return True, tilepos
     
     """
     Perform a move if it is possible. If move is not possible, will do nothing. If move is possible, will return the sum of all the merges made in the move
     action must be a valid member of Move enum
     """
-    def performActionIfPossible(self, action, savestate = True, override=False):
+    def performActionIfPossible(self, action, savestate = True):
 
         if (action.name in Move.__members__):
 
-            if (self.strategic and (not action.name in StrategicMove.__members__) and (not override)):
-                return -2.0
-            else:
-                action = Move.__members__[action.name]
+            action = Move.__members__[action.name]
 
             #Save state to compare afterwards
             prev_state = self.cells.copy()
@@ -161,8 +158,8 @@ class Grid2048():
         return self.getStateScore == 8
 
     def getStateScore(self):
-        h = np.count_nonzero(np.all(self.cells[:, 1:] >= self.cells[:, :-1], axis=1))
-        v = np.count_nonzero(np.all(self.cells[1:, :] >= self.cells[:-1, :], axis=0))
+        h = np.count_nonzero(np.all(self.cells[:, 1:] <= self.cells[:, :-1], axis=1))
+        v = np.count_nonzero(np.all(self.cells[1:, :] <= self.cells[:-1, :], axis=0))
         return h + v
 
     def highestTile(self):
