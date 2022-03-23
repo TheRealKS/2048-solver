@@ -97,8 +97,8 @@ class Game2048PyEnv(py_environment.PyEnvironment):
         'new_tile': np.array(poss, dtype=np.int32)
     }
 
-    if (action == Move.DOWN or action == Move.LEFT):
-        r *= 2.0
+    if (action == Move.DOWN or action == Move.LEFT or action == Move.RIGHT):
+      r *= 2.0
 
     if (t):
         if (self._state.isWellOrdered()):

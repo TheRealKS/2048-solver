@@ -12,7 +12,7 @@ def findCriticalSection(state : np.ndarray):
     return np.argmax(rowsum), np.argmax(colsum)
 
 def criticalSectionValue(state : np.ndarray, crow, ccol):
-    return state[crow].sum() + state[:, ccol].sum() - state[crow][ccol]
+    return state[crow].sum() #+ state[:, ccol].sum() - state[crow][ccol]
 
 def criticalSectionValueAfterMove(state : np.ndarray, move : Move, crow, ccol):
     board = Grid2048.transform_board(state, move, True)

@@ -160,6 +160,7 @@ class Grid2048():
     def getStateScore(self):
         h = np.count_nonzero(np.all(self.cells[:, 1:] <= self.cells[:, :-1], axis=1))
         v = np.count_nonzero(np.all(self.cells[1:, :] <= self.cells[:-1, :], axis=0))
+        
         return h + v
 
     def highestTile(self):

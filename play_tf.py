@@ -7,6 +7,8 @@ import PIL.Image
 import reverb
 from tf_agents import utils
 from tf_agents.trajectories.time_step import time_step_spec
+import os
+from datetime import datetime
 
 from GameEnvTF import Game2048PyEnv
 
@@ -49,7 +51,7 @@ def splitter_fun(obs):
     return obs['observation'], obs['legal_moves']
 
 
-num_iterations = 1000 # @param {type:"integer"}
+num_iterations = 100 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
 replay_buffer_capacity = 20000 # @param {type:"integer"}
 
@@ -171,8 +173,13 @@ for _ in range(num_iterations):
     print('step = {0}: loss = {1}'.format(step, train_loss))
 
 print("Done, evaluating strategy")
+
+dirname = "run_" + datetime.now().strftime("%d-%b-%Y-(%H:%M:%S)")
+os.mkdir(dirname)
+
 biggest = 0
-wrun = ""
+wrun = -1
+runs = []
 pol = tf_agent.post_process_policy()
 for i in range(0,10):
   run = ""
@@ -188,9 +195,15 @@ for i in range(0,10):
   m = timestep.observation['observation'][0].numpy().max()
   if (m > biggest):
     biggest = m
-    wrun = run
+    wrun = i
+  
+  runs.append(run)
 
-f = open("run.txt", "w")
-f.write(wrun)
-f.flush()
-f.close()
+for i in range(0,10):
+  name = "run_" + str(i) + ".txt"
+  if (i == wrun):
+    name = "run_best_" + str(i) + ".txt"
+  f = open("./" + dirname + "/" + name, "w")
+  f.write(runs[i])
+  f.flush()
+  f.close()

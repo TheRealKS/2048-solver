@@ -1,3 +1,4 @@
+from re import I
 import numpy as np
 from grid import Grid2048
 from shield import criticalSectionValueAfterMove, findCriticalSection
@@ -19,12 +20,12 @@ def arr_eq(a, b):
 
     return True
 
-grid = np.array([[ 16,   0,  0,  0],
-                [  32,   4,  0,  0],
-                [  64,  16,  2,  4],
-                [  512, 64,  8,  2]])
+grid = np.array([[ 4,    0,  0,  0],
+                [  8,    4,  0,  2],
+                [  32,   4,  4,  0],
+                [  128,  64,  32,  16]])
 
-r, c = findCriticalSection(grid)
-print(r,c)
-print(criticalSectionValueAfterMove(grid, Move.UP, r, c))
-print(criticalSectionValueAfterMove(grid, Move.RIGHT, r, c))
+a = grid > 8
+b = grid <= 64
+c = np.bitwise_and(a, b)
+print(np.count_nonzero(np.count_nonzero(c, axis=1) == 1))
