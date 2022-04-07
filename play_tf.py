@@ -27,8 +27,11 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.environments import utils
 from tf_agents.networks import q_network
+from ShieldEnvTF import Game2048ShieldPyEnv
+from driver_shielded import ShieldedDriver
 
 from move import Move
+from shield_driver import ShieldDriver
 
 def compute_avg_return(environment, policy, num_episodes=10):
 
@@ -72,6 +75,9 @@ eval_py_env = Game2048PyEnv()
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
+train_shield_pyenv = Game2048ShieldPyEnv()
+train_shield_env = tf_py_environment.TFPyEnvironment(train_shield_pyenv)
+
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 train_step_counter = tf.Variable(0)
@@ -82,6 +88,19 @@ tf_agent = dqn_agent.DqnAgent(
     q_network=q_network.QNetwork(
 				env.time_step_spec().observation['observation'],
 				env.action_spec(),
+				fc_layer_params=fc_layer_params),
+    optimizer=optimizer,
+    td_errors_loss_fn=common.element_wise_squared_loss,
+    train_step_counter=train_step_counter,
+    observation_and_action_constraint_splitter=splitter_fun)
+tf_agent.initialize()
+
+shield_agent = dqn_agent.DqnAgent(
+    train_shield_env.time_step_spec(),
+    train_shield_env.action_spec(),
+    q_network=q_network.QNetwork(
+				train_shield_env.time_step_spec().observation['observation'],
+				train_shield_env.action_spec(),
 				fc_layer_params=fc_layer_params),
     optimizer=optimizer,
     td_errors_loss_fn=common.element_wise_squared_loss,
@@ -150,9 +169,21 @@ returns = [avg_return]
 # Reset the environment.
 time_step = train_py_env.reset()
 
+
+shield_driver = ShieldDriver(
+  train_shield_pyenv,
+  py_tf_eager_policy.PyTFEagerPolicy(
+    shield_agent.collect_policy, use_tf_function=True),
+  [rb_observer],
+  max_episodes = 1
+)
+
 # Create a driver to collect experience.
-collect_driver = py_driver.PyDriver(
+collect_driver = ShieldedDriver(
     train_py_env,
+    shield_agent,
+    shield_driver,
+    iterator,
     py_tf_eager_policy.PyTFEagerPolicy(
       tf_agent.collect_policy, use_tf_function=True),
     [rb_observer],
@@ -161,8 +192,8 @@ collect_driver = py_driver.PyDriver(
 for _ in range(num_iterations):
   time_step = train_py_env.reset()
   # Collect a few steps and save to the replay buffer.
-  time_step, _ = collect_driver.run(time_step)
-
+  time_step, s = collect_driver.run(time_step)
+  
   # Sample a batch of data from the buffer and update the agent's network.
   experience, unused_info = next(iterator)
   train_loss = tf_agent.train(experience).loss

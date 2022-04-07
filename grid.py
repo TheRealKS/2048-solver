@@ -2,11 +2,9 @@
 
 
 from random import choice
-from typing_extensions import Annotated
 import numpy as np
 
 from move import Move, toMoveEnum
-from stratmove import StrategicMove
 
 class Grid2048():
     
@@ -153,6 +151,12 @@ class Grid2048():
     """
     Utility methods
     """
+
+    def copy(self):
+        cellcopy = self.cells.copy()
+        newgrid = Grid2048()
+        newgrid.cells = cellcopy
+        return newgrid
 
     def isWellOrdered(self):
         return self.getStateScore == 8

@@ -23,7 +23,7 @@ from shieldenvironment import ShieldedEnvironment
 from util import generateRandomGrid
 
 
-class Game2048PyEnv(ShieldedEnvironment):
+class Game2048ShieldPyEnv(ShieldedEnvironment):
 
   def __init__(self, initial_state : Grid2048 = None):
     super().__init__()
@@ -69,19 +69,12 @@ class Game2048PyEnv(ShieldedEnvironment):
 
     action = Move(action)
 
-    if (save):
-      self._previous_state = self._state.copy()
-
     prevstatescore = self._state.getStateScore()
 
     r = np.double(self._state.performActionIfPossible(action))
+
     newscore = self._state.getStateScore()
-    if (prevstatescore > newscore):
-        if (prevstatescore - newscore > 3):
-            r = 0.0
-    elif (newscore > prevstatescore):
-        if (newscore - prevstatescore > 3):
-            r *= 2.0
+    red = newscore - prevstatescore
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
@@ -94,21 +87,15 @@ class Game2048PyEnv(ShieldedEnvironment):
         'new_tile': np.array(poss, dtype=np.int32)
     }
 
-    if (action == Move.DOWN or action == Move.LEFT or action == Move.RIGHT):
-      r *= 2.0
+    r = self._state.sumOfTiles()
 
     if (t):
-        if (self._state.isWellOrdered()):
-            return ts.transition(returnspec, reward=r*2.0)
-        else:
-            return ts.transition(returnspec, reward=r)
+        return ts.transition(returnspec, reward=(r - red))
     else:
-        #print('termination')
-        #print(self._state.toIntArray())
         return ts.termination(returnspec, reward=0.0)
 
   def getAbsoluteScore(self):
-      return self._state.sumOfTiles() + self._state.getStateScore()
+      return super().getAbsoluteScore()
 
   def revert(self):
     self.cells = self._previous_state.cells
