@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import abc
+import math
 from typing import Tuple
 import tensorflow as tf
 import numpy as np
@@ -77,11 +78,12 @@ class Game2048PyEnv(ShieldedEnvironment):
     r = np.double(self._state.performActionIfPossible(action))
     newscore = self._state.getStateScore()
     if (prevstatescore > newscore):
-        if (prevstatescore - newscore > 3):
+        if (prevstatescore - newscore > 40):
             r = 0.0
     elif (newscore > prevstatescore):
-        if (newscore - prevstatescore > 3):
+        if (newscore - prevstatescore > 40):
             r *= 2.0
+    red = (newscore - prevstatescore) / 100
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
@@ -94,18 +96,18 @@ class Game2048PyEnv(ShieldedEnvironment):
         'new_tile': np.array(poss, dtype=np.int32)
     }
 
-    if (action == Move.DOWN or action == Move.LEFT or action == Move.RIGHT):
-      r *= 2.0
+    if (action == Move.LEFT or action == Move.DOWN):
+      r *= (1 + red)
 
     if (t):
-        if (self._state.isWellOrdered()):
-            return ts.transition(returnspec, reward=r*2.0)
-        else:
-            return ts.transition(returnspec, reward=r)
+        return ts.transition(returnspec, reward=r * red)
     else:
         #print('termination')
         #print(self._state.toIntArray())
         return ts.termination(returnspec, reward=0.0)
+
+  def get_state(self):
+    return self._state.copy()
 
   def getAbsoluteScore(self):
       return self._state.sumOfTiles() + self._state.getStateScore()

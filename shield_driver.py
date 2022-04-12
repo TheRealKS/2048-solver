@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from email import policy
 import random
 from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple
 
@@ -82,8 +83,8 @@ class ShieldDriver(driver.Driver):
   def run(
       self,
       time_step: ts.TimeStep,
-      policy_state: types.NestedArray = ()
-  ) -> Tuple[ts.TimeStep, types.NestedArray]:
+      env_state: Game2048ShieldPyEnv
+  ):
     """Run policy in environment given initial time_step and policy_state.
 
     Args:
@@ -94,37 +95,24 @@ class ShieldDriver(driver.Driver):
       A tuple (final time_step, final policy_state).
     """
     num_steps = 0
-    num_episodes = 0 
     first_action = None
     cummulative_reward = 0
-    while num_steps < self._max_steps and num_episodes < self._max_episodes:
-      # For now we reset the policy_state for non batched envs.
-      if not self.env.batched and time_step.is_first() and num_episodes > 0:
-        policy_state = self._policy.get_initial_state(self.env.batch_size or 1)
-
-      action_step = self.policy.action(time_step, policy_state)
+    self._env.set_state(env_state)
+    while num_steps < 5:
+      action_step = self.policy.action(time_step)
       action = action_step.action
       if (first_action == None):
           first_action = random.choice(self.first_actions)
           action = first_action
 
-      next_time_step = self.env._step(action)
+      next_time_step = self._env._step(action)
+      cummulative_reward += next_time_step.reward
 
-      # When using observer (for the purpose of training), only the previous
-      # policy_state is useful. Therefore substitube it in the PolicyStep and
-      # consume it w/ the observer.
-      action_step_with_previous_state = action_step._replace(state=policy_state)
-      traj = trajectory.from_transition(
-          time_step, action_step_with_previous_state, next_time_step)
-      for observer in self._transition_observers:
-        observer((time_step, action_step_with_previous_state, next_time_step))
-      for observer in self.observers:
-        observer(traj)
-
-      num_episodes += np.sum(traj.is_boundary())
-      num_steps += np.sum(~traj.is_boundary())
+      num_steps += 1
 
       time_step = next_time_step
       policy_state = action_step.state
 
-    return time_step, policy_state, first_action
+    if (time_step.is_last()):
+      cummulative_reward = 0
+    return time_step, policy_state, first_action, cummulative_reward

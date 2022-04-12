@@ -108,18 +108,20 @@ class ShieldedDriver(driver.Driver):
 
       action_step = self.policy.action(time_step, policy_state)
       selected_action = action_step.action
-      next_time_step = self.env._step(action_step.action, save = True)
-      if (selected_action in self.save_moves):
-        time_step, _, action = self.shield_driver.run(time_step, policy_state)
-        experience, unused_info = next(self.ds_iterator)
+      env_state_prior = self._env.get_state()
+      next_time_step : ts.TimeStep = self.env._step(action_step.action, save = True)
+      # Save reward of performing policy move
+      r1 = next_time_step.reward
+      if (selected_action in self.save_moves and num_steps > 15):
+        _, _, f_action, cr = self.shield_driver.run(time_step, env_state_prior)
 
-        train_loss = self.shield.train(experience).loss
-
-        print(time_step.reward)
-        print(self.env.getAbsoluteScore())
-        if (time_step.reward > self.env.getAbsoluteScore()):
+        if ((cr / 5) - env_state_prior.highestTile() > r1):
             self.env.revert()
-            next_time_step = self.env._step(action)
+            next_time_step = self.env._step(f_action)
+            next_time_step.discount = 0.5
+            action_step._replace(action=f_action)
+        else:
+            next_time_step.observation['legal_moves'][f_action] = False
 
       # When using observer (for the purpose of training), only the previous
       # policy_state is useful. Therefore substitube it in the PolicyStep and

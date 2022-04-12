@@ -1,6 +1,8 @@
 """Wrapper for the 2048 grid"""
 
 
+import itertools
+import operator
 from random import choice
 import numpy as np
 
@@ -158,14 +160,22 @@ class Grid2048():
         newgrid.cells = cellcopy
         return newgrid
 
-    def isWellOrdered(self):
+    def isWellOrdered(self):    
         return self.getStateScore == 8
 
     def getStateScore(self):
-        h = np.count_nonzero(np.all(self.cells[:, 1:] <= self.cells[:, :-1], axis=1))
-        v = np.count_nonzero(np.all(self.cells[1:, :] <= self.cells[:-1, :], axis=0))
+        def monotone_increasing(lst):
+            pairs = zip(lst, lst[1:])
+            return all(itertools.starmap(operator.le, pairs))
+
+        def monotone_decreasing(lst):
+            pairs = zip(lst, lst[1:])
+            return all(itertools.starmap(operator.ge, pairs))
         
-        return h + v
+        h = np.count_nonzero(list(map(monotone_decreasing, self.cells)))
+        v = np.count_nonzero(list(map(monotone_increasing, self.cells.T)))
+
+        return (h + v) / 0.08
 
     def highestTile(self):
         return self.cells.max()

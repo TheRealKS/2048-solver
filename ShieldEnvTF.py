@@ -74,7 +74,13 @@ class Game2048ShieldPyEnv(ShieldedEnvironment):
     r = np.double(self._state.performActionIfPossible(action))
 
     newscore = self._state.getStateScore()
-    red = newscore - prevstatescore
+    if (prevstatescore > newscore):
+        if (prevstatescore - newscore > 40):
+            r = 0.0
+    elif (newscore > prevstatescore):
+        if (newscore - prevstatescore > 40):
+            r *= 2.0
+    red = (newscore - prevstatescore) / 100
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
@@ -87,12 +93,13 @@ class Game2048ShieldPyEnv(ShieldedEnvironment):
         'new_tile': np.array(poss, dtype=np.int32)
     }
 
-    r = self._state.sumOfTiles()
-
     if (t):
-        return ts.transition(returnspec, reward=(r - red))
+        return ts.transition(returnspec, reward=red * r)
     else:
         return ts.termination(returnspec, reward=0.0)
+
+  def set_state(self, state) -> None:
+      self._state = state
 
   def getAbsoluteScore(self):
       return super().getAbsoluteScore()

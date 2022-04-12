@@ -54,7 +54,7 @@ def splitter_fun(obs):
     return obs['observation'], obs['legal_moves']
 
 
-num_iterations = 100 # @param {type:"integer"}
+num_iterations = 250 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
 replay_buffer_capacity = 20000 # @param {type:"integer"}
 
@@ -82,13 +82,20 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 train_step_counter = tf.Variable(0)
 
+network_prot = q_network.QNetwork(
+				env.time_step_spec().observation['observation'],
+				env.action_spec(),
+				fc_layer_params=fc_layer_params)
+
+network_shield = q_network.QNetwork(
+        env.time_step_spec().observation['observation'],
+        env.action_spec(),
+        fc_layer_params=fc_layer_params)
+
 tf_agent = dqn_agent.DqnAgent(
     train_env.time_step_spec(),
     train_env.action_spec(),
-    q_network=q_network.QNetwork(
-				env.time_step_spec().observation['observation'],
-				env.action_spec(),
-				fc_layer_params=fc_layer_params),
+    q_network=network_prot,
     optimizer=optimizer,
     td_errors_loss_fn=common.element_wise_squared_loss,
     train_step_counter=train_step_counter,
@@ -98,83 +105,97 @@ tf_agent.initialize()
 shield_agent = dqn_agent.DqnAgent(
     train_shield_env.time_step_spec(),
     train_shield_env.action_spec(),
-    q_network=q_network.QNetwork(
-				train_shield_env.time_step_spec().observation['observation'],
-				train_shield_env.action_spec(),
-				fc_layer_params=fc_layer_params),
+    q_network=network_shield,
     optimizer=optimizer,
     td_errors_loss_fn=common.element_wise_squared_loss,
     train_step_counter=train_step_counter,
     observation_and_action_constraint_splitter=splitter_fun)
-tf_agent.initialize()
+shield_agent.initialize()
 
 eval_policy = tf_agent.policy
 collect_policy = tf_agent.collect_policy
 
-table_name = 'uniform_table'
+table_name = 'prot_table'
 replay_buffer_signature = tensor_spec.from_spec(
       tf_agent.collect_data_spec)
 replay_buffer_signature = tensor_spec.add_outer_dim(
     replay_buffer_signature)
 
-table = reverb.Table(
+prot_table = reverb.Table(
     table_name,
     max_size=100000,
     sampler=reverb.selectors.Uniform(),
     remover=reverb.selectors.Fifo(),
     rate_limiter=reverb.rate_limiters.MinSize(1),
     signature=replay_buffer_signature)
+  
+shield_table = reverb.Table(
+    'shield_table',
+    max_size=100000,
+    sampler=reverb.selectors.Uniform(),
+    remover=reverb.selectors.Fifo(),
+    rate_limiter=reverb.rate_limiters.MinSize(1),
+    signature=replay_buffer_signature)
 
-reverb_server = reverb.Server([table])
+reverb_server = reverb.Server([prot_table, shield_table])
 
-replay_buffer = reverb_replay_buffer.ReverbReplayBuffer(
+replay_buffer_prot = reverb_replay_buffer.ReverbReplayBuffer(
     tf_agent.collect_data_spec,
     table_name=table_name,
     sequence_length=2,
     local_server=reverb_server)
+  
+replay_buffer_shield = reverb_replay_buffer.ReverbReplayBuffer(
+    shield_agent.collect_data_spec,
+    table_name='shield_table',
+    sequence_length=2,
+    local_server=reverb_server)
 
-rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
-  replay_buffer.py_client,
+rb_observer_prot = reverb_utils.ReverbAddTrajectoryObserver(
+  replay_buffer_prot.py_client,
   table_name,
   sequence_length=2)
 
+rb_observer_shield = reverb_utils.ReverbAddTrajectoryObserver(
+  replay_buffer_shield.py_client,
+  'shield_table',
+  sequence_length=2
+)
 
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 tf_agent.train = common.function(tf_agent.train)
+shield_agent.train = common.function(shield_agent.train)
 
 # Reset the train step
 tf_agent.train_step_counter.assign(0)
+shield_agent.train_step_counter.assign(0)
 
 # Evaluate the agent's policy once before training.
 avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
 returns = [avg_return]
 
-ds = replay_buffer.as_dataset(
+ds = replay_buffer_prot.as_dataset(
+    num_parallel_calls=3,
+    sample_batch_size=64,
+    num_steps=2).prefetch(3)
+
+ds_shield = replay_buffer_shield.as_dataset(
     num_parallel_calls=3,
     sample_batch_size=64,
     num_steps=2).prefetch(3)
 
 iterator = iter(ds)
+it_shield = iter(ds_shield)
 
-# (Optional) Optimize by wrapping some of the code in a graph using TF function.
-tf_agent.train = common.function(tf_agent.train)
-
-# Reset the train step.
-tf_agent.train_step_counter.assign(0)
-
-# Evaluate the agent's policy once before training.
-avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
-returns = [avg_return]
-
-# Reset the environment.
 time_step = train_py_env.reset()
 
+policy_u = py_tf_eager_policy.PyTFEagerPolicy(
+    tf_agent.collect_policy, use_tf_function=True)
 
 shield_driver = ShieldDriver(
   train_shield_pyenv,
-  py_tf_eager_policy.PyTFEagerPolicy(
-    shield_agent.collect_policy, use_tf_function=True),
-  [rb_observer],
+  policy_u,
+  [rb_observer_shield],
   max_episodes = 1
 )
 
@@ -183,10 +204,9 @@ collect_driver = ShieldedDriver(
     train_py_env,
     shield_agent,
     shield_driver,
-    iterator,
-    py_tf_eager_policy.PyTFEagerPolicy(
-      tf_agent.collect_policy, use_tf_function=True),
-    [rb_observer],
+    it_shield,
+    policy_u,
+    [rb_observer_prot],
     max_episodes=1)
 
 for _ in range(num_iterations):

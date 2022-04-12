@@ -20,12 +20,14 @@ def arr_eq(a, b):
 
     return True
 
-grid = np.array([[ 4,    0,  0,  0],
-                [  8,    4,  0,  2],
-                [  32,   4,  4,  0],
-                [  128,  64,  32,  16]])
+gridc = np.array([[ 2,    4,  8,  4],
+                [  4,    8,  2,  16],
+                [  8,    2,  8,  32],
+                [  16,   32, 128,  512]])
 
-a = grid > 8
-b = grid <= 64
-c = np.bitwise_and(a, b)
-print(np.count_nonzero(np.count_nonzero(c, axis=1) == 1))
+#gridc = np.array(list(map(lambda r: list(reversed(r)), gridc)))
+#print(gridc)
+
+grid = Grid2048()
+grid.cells = gridc
+print(grid.getStateScore())

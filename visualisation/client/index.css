@@ -49,6 +49,7 @@ html,body {
     padding-left: 2vw;
     overflow: scroll;
     padding-bottom: 1vw;
+    scroll-behavior: smooth;
 }
 
 .timestep {

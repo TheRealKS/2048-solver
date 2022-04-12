@@ -156,7 +156,7 @@ function selectTimestep(index : number, update = false, first = false) {
         let gridcontainer = document.getElementById("grid_container");
         gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state, gameMap[index].tileAdded), gridcontainer.firstChild);
 
-        newcurrent.scrollIntoView({block: "center"})
+        newcurrent.parentElement.scroll(0, newcurrent.offsetTop - 55);
     }
     if (update) {
         currentTimestep = index;
@@ -164,7 +164,7 @@ function selectTimestep(index : number, update = false, first = false) {
 }
 
 function stepForward() {
-    if (currentTimestep >= 0 && currentTimestep < numtimesteps) {
+    if (currentTimestep >= 0 && currentTimestep < numtimesteps - 1) {
         selectTimestep(currentTimestep + 1);
         currentTimestep++;
     }
@@ -184,4 +184,7 @@ window.onload = function() {
     document.getElementById("stepBackward").addEventListener("click", () => {
        stepBackward(); 
     });
+    document.getElementById("reset").addEventListener("click", () => {
+        location.reload();
+    })
 }

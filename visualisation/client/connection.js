@@ -189,14 +189,14 @@ function selectTimestep(index, update, first) {
         document.getElementById("game_grid").remove();
         var gridcontainer = document.getElementById("grid_container");
         gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state, gameMap[index].tileAdded), gridcontainer.firstChild);
-        newcurrent.scrollIntoView({ block: "center" });
+        newcurrent.parentElement.scroll(0, newcurrent.offsetTop - 55);
     }
     if (update) {
         currentTimestep = index;
     }
 }
 function stepForward() {
-    if (currentTimestep >= 0 && currentTimestep < numtimesteps) {
+    if (currentTimestep >= 0 && currentTimestep < numtimesteps - 1) {
         selectTimestep(currentTimestep + 1);
         currentTimestep++;
     }
@@ -213,5 +213,8 @@ window.onload = function () {
     });
     document.getElementById("stepBackward").addEventListener("click", function () {
         stepBackward();
+    });
+    document.getElementById("reset").addEventListener("click", function () {
+        location.reload();
     });
 };
