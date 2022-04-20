@@ -41,8 +41,9 @@ class Game2048PyEnv(ShieldedEnvironment):
     self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
     self._observation_spec = {
         'observation': array_spec.BoundedArraySpec(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float('inf'), name='board'),
-        'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_),
-        'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32)
+        'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_, name='legal'),
+        'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32, name='new_tile'),
+        'mergeable': array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=8, name='mergeable')
     }
 
     self._previous_state : Grid2048 = None
@@ -56,12 +57,14 @@ class Game2048PyEnv(ShieldedEnvironment):
   def _reset(self):
     self._episode_ended = False
     self._state.cells = self._initial_state_grid.copy()
-    legal_moves = self.parseLegalMoves(self._state.movesAvailableInDirection())
+    legal, _ = self._state.movesAvailableInDirection()
+    legal_moves = self.parseLegalMoves(legal)
     returnspec = {
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
-        'new_tile': np.array([-1,-1], dtype=np.int32)
-    }
+        'new_tile': np.array([-1,-1], dtype=np.int32),
+        'mergeable': np.array(0, dtype=np.int32)
+    } 
     return ts.restart(returnspec)
 
   def _step(self, action, save = False):
@@ -88,19 +91,20 @@ class Game2048PyEnv(ShieldedEnvironment):
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
     
-    legal_moves = self._state.movesAvailableInDirection()
+    legal_moves, m = self._state.movesAvailableInDirection()
     legal_moves = self.parseLegalMoves(legal_moves)
     returnspec = {
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
-        'new_tile': np.array(poss, dtype=np.int32)
+        'new_tile': np.array(poss, dtype=np.int32),
+        'mergeable': np.array(len(m) / 2, dtype=np.int32)
     }
 
     if (action == Move.LEFT or action == Move.DOWN):
       r *= (1 + red)
 
     if (t):
-        return ts.transition(returnspec, reward=r * red)
+        return ts.transition(returnspec, reward=r)
     else:
         #print('termination')
         #print(self._state.toIntArray())
@@ -108,9 +112,14 @@ class Game2048PyEnv(ShieldedEnvironment):
 
   def get_state(self):
     return self._state.copy()
+  
+  def set_state(self, state) -> None:
+    g = Grid2048()
+    g.cells = state
+    self._state = g
 
   def getAbsoluteScore(self):
-      return self._state.sumOfTiles() + self._state.getStateScore()
+      return 
 
   def revert(self):
     self.cells = self._previous_state.cells

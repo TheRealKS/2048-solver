@@ -20,10 +20,10 @@ def arr_eq(a, b):
 
     return True
 
-gridc = np.array([[ 2,    4,  8,  4],
-                [  4,    8,  2,  16],
-                [  8,    2,  8,  32],
-                [  16,   32, 128,  512]])
+gridc = np.array([[ 2,    2,  32,  4],
+                [  0,    0,  4,  4],
+                [  0,    0,  0,  0],
+                [  0,   0, 0,  2]])
 
 #gridc = np.array(list(map(lambda r: list(reversed(r)), gridc)))
 #print(gridc)

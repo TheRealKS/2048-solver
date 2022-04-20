@@ -3,3 +3,4 @@ __pycache__/
 /.2048env
 /acme
 /run_*
+/archive

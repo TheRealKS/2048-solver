@@ -101,27 +101,15 @@ class ShieldedDriver(driver.Driver):
     """
     num_steps = 0
     num_episodes = 0
+    buffer = []
+    env_state_prior = self._env.get_state()
     while num_steps < self._max_steps and num_episodes < self._max_episodes:
       # For now we reset the policy_state for non batched envs.
       if not self.env.batched and time_step.is_first() and num_episodes > 0:
         policy_state = self._policy.get_initial_state(self.env.batch_size or 1)
 
       action_step = self.policy.action(time_step, policy_state)
-      selected_action = action_step.action
-      env_state_prior = self._env.get_state()
       next_time_step : ts.TimeStep = self.env._step(action_step.action, save = True)
-      # Save reward of performing policy move
-      r1 = next_time_step.reward
-      if (selected_action in self.save_moves and num_steps > 15):
-        _, _, f_action, cr = self.shield_driver.run(time_step, env_state_prior)
-
-        if ((cr / 5) - env_state_prior.highestTile() > r1):
-            self.env.revert()
-            next_time_step = self.env._step(f_action)
-            next_time_step.discount = 0.5
-            action_step._replace(action=f_action)
-        else:
-            next_time_step.observation['legal_moves'][f_action] = False
 
       # When using observer (for the purpose of training), only the previous
       # policy_state is useful. Therefore substitube it in the PolicyStep and
@@ -129,15 +117,21 @@ class ShieldedDriver(driver.Driver):
       action_step_with_previous_state = action_step._replace(state=policy_state)
       traj = trajectory.from_transition(
           time_step, action_step_with_previous_state, next_time_step)
-      for observer in self._transition_observers:
-        observer((time_step, action_step_with_previous_state, next_time_step))
-      for observer in self.observers:
-        observer(traj)
 
       num_episodes += np.sum(traj.is_boundary())
       num_steps += np.sum(~traj.is_boundary())
 
       time_step = next_time_step
       policy_state = action_step.state
+      buffer.append(traj)
+
+    traj = self.shield_driver.verify_trajectory(buffer)
+
+    for t in traj:
+      for observer in self._transition_observers:
+        observer((time_step, action_step_with_previous_state, next_time_step))
+      for observer in self.observers:
+        observer(t)
+
 
     return time_step, policy_state

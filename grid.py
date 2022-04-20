@@ -41,21 +41,34 @@ class Grid2048():
 
     def movesAvailableInDirection(self):
         moves = set()
+        mergeable = set()
         for i in range(0,self._size):
             for j in range(0,self._size):
                 for r in [-1, 1]:
                     if 0 <= i+r < self._size:
                         if (self.cells[i][j] == self.cells[i+r][j]) and self.cells[i][j] > 0:
                             moves.add(("v",r))
+                            if (self.cells[i+r][j] > 0):
+                                mergeable.add((i, j))
+                                mergeable.add((i+r, j))
                         elif self.cells[i+r][j] == 0 and self.cells[i][j] != 0:
                             moves.add(("v",r))
+                            if (self.cells[i+r][j] > 0):
+                                mergeable.add((i+r, j))
+                                mergeable.add((i, j))
                     if 0 <= j+r < self._size:
                         if (self.cells[i][j] == self.cells[i][j+r]) and self.cells[i][j] > 0:
                             moves.add(("h",r))
+                            if (self.cells[i][j+r] > 0):
+                                mergeable.add((i, j))
+                                mergeable.add((i, j+r))
                         elif self.cells[i][j+r] == 0 and self.cells[i][j] != 0:
                             moves.add(("h", r))
+                            if (self.cells[i][j+r]):
+                                mergeable.add((i, j+r))
+                                mergeable.add((i, j))
 
-        return set(map(lambda m : toMoveEnum(m), moves))
+        return set(map(lambda m : toMoveEnum(m), moves)), mergeable
         
     """Add a random tile to the grid (2 or 4)"""
     def addRandomTile(self):
