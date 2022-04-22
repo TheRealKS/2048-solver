@@ -223,7 +223,6 @@ window.onload = function () {
             for (var _i = 0, _a = inputs.children; _i < _a.length; _i++) {
                 var input = _a[_i];
                 input.disabled = false;
-                setupManual();
             }
         }
         else {
@@ -232,6 +231,37 @@ window.onload = function () {
                 var input = _c[_b];
                 input.disabled = true;
             }
+        }
+    });
+    document.getElementById("left").addEventListener("click", function () {
+        manual(Move.LEFT);
+    });
+    document.getElementById("right").addEventListener("click", function () {
+        manual(Move.RIGHT);
+    });
+    document.getElementById("up").addEventListener("click", function () {
+        manual(Move.UP);
+    });
+    document.getElementById("down").addEventListener("click", function () {
+        manual(Move.DOWN);
+    });
+    document.body.addEventListener('keydown', function (event) {
+        if (!document.getElementById("override").checked) {
+            return;
+        }
+        switch (event.key) {
+            case "ArrowLeft":
+                manual(Move.LEFT);
+                break;
+            case "ArrowRight":
+                manual(Move.RIGHT);
+                break;
+            case "ArrowUp":
+                manual(Move.UP);
+                break;
+            case "ArrowDown":
+                manual(Move.DOWN);
+                break;
         }
     });
 };

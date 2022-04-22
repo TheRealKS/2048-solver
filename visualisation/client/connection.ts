@@ -192,7 +192,6 @@ window.onload = function() {
             let inputs = document.getElementById("manual_inputs")
             for (var input of inputs.children) {
                 input.disabled = false;
-                setupManual();
             }
         } else {
             let inputs = document.getElementById("manual_inputs")
@@ -202,4 +201,36 @@ window.onload = function() {
         }
     });
 
+    document.getElementById("left").addEventListener("click", () => {
+        manual(Move.LEFT);
+    });
+    document.getElementById("right").addEventListener("click", () => {
+        manual(Move.RIGHT);
+    });
+    document.getElementById("up").addEventListener("click", () => {
+        manual(Move.UP);
+    });
+    document.getElementById("down").addEventListener("click", () => {
+        manual(Move.DOWN);
+    });
+
+    document.body.addEventListener('keydown', function(event) {
+        if (!document.getElementById("override").checked) {
+            return;
+        }
+        switch (event.key) {
+            case "ArrowLeft":
+                manual(Move.LEFT);
+                break;
+            case "ArrowRight":
+                manual(Move.RIGHT);
+                break;
+            case "ArrowUp":
+                manual(Move.UP);
+                break;
+            case "ArrowDown":
+                manual(Move.DOWN);
+                break;
+        }
+    });
 }
