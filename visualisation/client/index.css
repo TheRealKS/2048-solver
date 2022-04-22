@@ -80,3 +80,6 @@ html,body {
 .outline {
     border: 4px solid black;
 }
+.invisible {
+    color: white;
+}

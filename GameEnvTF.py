@@ -80,12 +80,6 @@ class Game2048PyEnv(ShieldedEnvironment):
 
     r = np.double(self._state.performActionIfPossible(action))
     newscore = self._state.getStateScore()
-    if (prevstatescore > newscore):
-        if (prevstatescore - newscore > 40):
-            r = 0.0
-    elif (newscore > prevstatescore):
-        if (newscore - prevstatescore > 40):
-            r *= 2.0
     red = (newscore - prevstatescore) / 100
 
     t, pos = self._state.addRandomTile()
@@ -101,7 +95,13 @@ class Game2048PyEnv(ShieldedEnvironment):
     }
 
     if (action == Move.LEFT or action == Move.DOWN):
+      if (r == 0):
+        r = newscore * 0.08
       r *= (1 + red)
+    else:
+      if (red <= -0.25 or (newscore < 30 and (len(m) / 2) < 2)):
+        r = 0.0
+        returnspec['legal_moves'][action.value] = False
 
     if (t):
         return ts.transition(returnspec, reward=r)

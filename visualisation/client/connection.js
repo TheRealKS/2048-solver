@@ -217,4 +217,21 @@ window.onload = function () {
     document.getElementById("reset").addEventListener("click", function () {
         location.reload();
     });
+    document.getElementById("override").addEventListener("change", function () {
+        if (document.getElementById("override").checked) {
+            var inputs = document.getElementById("manual_inputs");
+            for (var _i = 0, _a = inputs.children; _i < _a.length; _i++) {
+                var input = _a[_i];
+                input.disabled = false;
+                setupManual();
+            }
+        }
+        else {
+            var inputs = document.getElementById("manual_inputs");
+            for (var _b = 0, _c = inputs.children; _b < _c.length; _b++) {
+                var input = _c[_b];
+                input.disabled = true;
+            }
+        }
+    });
 };

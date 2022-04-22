@@ -20,14 +20,18 @@ def arr_eq(a, b):
 
     return True
 
-gridc = np.array([[ 2,    2,  32,  4],
-                [  0,    0,  4,  4],
-                [  0,    0,  0,  0],
-                [  0,   0, 0,  2]])
+gridc = np.array([[ 4,    2,  0,  2],
+                [  16,    8,   2,  0],
+                [  128,   32,  8,  8],
+                [  256,   128,  32, 16]])
 
 #gridc = np.array(list(map(lambda r: list(reversed(r)), gridc)))
 #print(gridc)
 
 grid = Grid2048()
 grid.cells = gridc
-print(grid.getStateScore())
+print(grid.getStateScore() * 0.08)
+print(grid.performActionIfPossible(Move.RIGHT))
+print(grid.cells)
+print(grid.getStateScore() * 0.08)
+print(grid.movesAvailableInDirection())

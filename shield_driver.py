@@ -61,19 +61,29 @@ class ShieldDriver():
         new_action = np.random.choice(self.first_actions, p=[0.2, 0.8])
         env.set_state(transition[1]['observation'])
         r1 = env._step(new_action)
-        print(transition.reward)
-        if (r1.reward > transition.reward):
-          traj[i].replace(action = np.array(new_action))
-          traj[i].replace(reward = np.array(r1))
-          traj[i].replace(discount = np.array(0.5))
-          print(r1) 
-        elif (transition[1]['mergeable'] == 0 and r1.observation['mergeable'] > 0):
-          traj[i].replace(action = np.array(new_action))
-          traj[i].replace(reward = np.array(r1))
-          traj[i].replace(discount = np.array(0.5))
-        elif (transition[1]['mergeable'] - r1.observation['mergeable'] >= 2):
-          traj[i].replace(action = np.array(new_action))
-          traj[i].replace(reward = np.array(r1))
-          traj[i].replace(discount = np.array(0.5))
+        reward_new = r1.reward / r1.observation['observation'].mean()
+        reward_old = transition.reward / transition[1]['observation'].mean()
+        if (reward_new == 0 and reward_old == 0):
+          if (r1.observation['mergeable'] > transition[1]['mergeable']):
+            #replace
+              traj[i].replace(action = np.array(new_action))
+              traj[i].replace(reward = np.array(r1))
+              traj[i].replace(discount = np.array(0.2))
+        elif (reward_new - reward_old >= 2.0):
+              traj[i].replace(action = np.array(new_action))
+              traj[i].replace(reward = np.array(r1))
+              traj[i].replace(discount = np.array(0.2))
+        # if (r1.reward > transition.reward):
+        #   traj[i].replace(action = np.array(new_action))
+        #   traj[i].replace(reward = np.array(r1))
+        #   traj[i].replace(discount = np.array(0.5))
+        # elif (transition[1]['mergeable'] == 0 and r1.observation['mergeable'] > 0):
+        #   traj[i].replace(action = np.array(new_action))
+        #   traj[i].replace(reward = np.array(r1))
+        #   traj[i].replace(discount = np.array(0.5))
+        # elif (transition[1]['mergeable'] - r1.observation['mergeable'] >= 1):
+        #   traj[i].replace(action = np.array(new_action))
+        #   traj[i].replace(reward = np.array(r1))
+        #   traj[i].replace(discount = np.array(0.5))
 
     return traj

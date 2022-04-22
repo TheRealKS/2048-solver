@@ -186,5 +186,20 @@ window.onload = function() {
     });
     document.getElementById("reset").addEventListener("click", () => {
         location.reload();
-    })
+    });
+    document.getElementById("override").addEventListener("change", () => {
+        if (document.getElementById("override").checked) {
+            let inputs = document.getElementById("manual_inputs")
+            for (var input of inputs.children) {
+                input.disabled = false;
+                setupManual();
+            }
+        } else {
+            let inputs = document.getElementById("manual_inputs")
+            for (var input of inputs.children) {
+                input.disabled = true;
+            }
+        }
+    });
+
 }

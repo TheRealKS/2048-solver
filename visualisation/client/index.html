@@ -2,6 +2,8 @@
     <head>
         <title>2048 REINFORCE</title>
         <link rel="stylesheet" href="index.css">
+        <script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
+        <script src="manual.js"></script>
         <script src="connection.js"></script>
     </head>
     <body>
@@ -36,6 +38,15 @@
             <button id="stepForward">Move forward</button>
             <br><br>
             <button id="reset">Reset</button>
+            <br><br>
+            <input type="checkbox" name="override" id="override">Override
+            <div id="manual_inputs">
+                <span class="invisible">Left  </span><button id="up" disabled>Up</button>
+                <br>
+                <button id="left" disabled>Left</button><span class="invisible">Up </span><button id="right" disabled>Right</button>
+                <br>
+                <span class="invisible">Left</span><button id="down" disabled>Down</button>
+            </div>
         </div>  
         <div class="game_episodes_container">
             <div class="game_episodes" id="episodes">
