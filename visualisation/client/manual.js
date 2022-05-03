@@ -47,7 +47,7 @@ function moveBoard(board, action) {
             if (non_zero[j] == non_zero[j + 1]) {
                 non_zero[j] += non_zero[j + 1];
                 sum_merges += non_zero[j];
-                non_zero.splice(j + 1);
+                non_zero.splice(j + 1, 1);
             }
             j += 1;
         }
