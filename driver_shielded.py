@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from fcntl import F_SEAL_SEAL
 from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -16,7 +17,6 @@ from tf_agents.agents.dqn import dqn_agent
 
 from tf_agents.typing import types
 
-from shield_driver import ShieldDriver
 from shieldenvironment import ShieldedEnvironment
 
 
@@ -27,7 +27,6 @@ class ShieldedDriver(driver.Driver):
       self,
       env: ShieldedEnvironment,
       shield: dqn_agent.DqnAgent,
-      shield_driver: ShieldDriver,
       ds_iterator : Iterator,
       policy: py_policy.PyPolicy,
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
@@ -82,7 +81,6 @@ class ShieldedDriver(driver.Driver):
     self._env = env
     self.save_moves = save_moves
     self.shield = shield
-    self.shield_driver = shield_driver
     self.ds_iterator = ds_iterator
 
   def run(
@@ -109,6 +107,72 @@ class ShieldedDriver(driver.Driver):
         policy_state = self._policy.get_initial_state(self.env.batch_size or 1)
 
       action_step = self.policy.action(time_step, policy_state)
+      copy_of_env = self._env.get_state().copy()
+      next_time_step : ts.TimeStep = self.env._step(action_step.action, save = True)
+
+      action_steps_to_observe = [(time_step, action_step, next_time_step)]
+
+      #Now that we have ran the step, verify it.
+      if (action_step.action in [1,3] and num_steps > 50 and False):
+          self._env.set_state(copy_of_env.cells)
+          new_action = 2 #np.random.choice(self.first_actions, p=[0.0, 1.0])
+          r1 = self._env._step(new_action)
+          r2 = self._env._step(1)
+
+          better = self.getStateProduct(r2.observation['observation'])
+          worse = self.getStateProduct(copy_of_env.cells)
+
+          if (better <= worse and r2.observation['strategySwitchSuitable']):
+              action_steps_to_observe = []
+              action_step = action_step._replace(action = np.array(2, dtype=np.int32))
+              action_steps_to_observe.append((time_step, action_step, r1))
+              other_action_step = action_step._replace(action=np.array(1, dtype=np.int32))
+              action_steps_to_observe.append((r1, other_action_step, r2))
+
+      for (t,a,n) in action_steps_to_observe:
+        action_step_with_previous_state = a._replace(state=policy_state)
+        traj = trajectory.from_transition(
+          t, action_step_with_previous_state, n)
+
+        num_episodes += np.sum(traj.is_boundary())
+        num_steps += np.sum(~traj.is_boundary())
+
+        time_step = n
+        policy_state = a.state
+
+        for observer in self._transition_observers:
+          observer((t, action_step_with_previous_state, n))
+        for observer in self.observers:
+          observer(traj)
+
+
+    return time_step, policy_state
+
+  def getStateProduct(self, state):
+    flat = state.flatten()
+    gzero = flat[flat > 0]
+    return gzero.prod()
+
+  def run_from_timestep(self, act, time_step: ts.TimeStep, traje : List[trajectory.Trajectory], policy_state: types.NestedArray = ()):
+    #First, observe the previous timesteps
+    for traj in traje:
+      for observer in self.observers:
+        observer(traj)
+
+    #Observe the replaced timesteps
+    action_step = self.policy.action(time_step, policy_state)
+    action_step_with_previous_state = action_step._replace(state=policy_state, action=np.array(act,dtype=np.int32))
+    last_observation = traje[len(traje)-1]
+    prev_timestep = ts.transition(last_observation.observation, last_observation.reward)
+    for observer in self.observers:
+      observer(trajectory.from_transition(prev_timestep, action_step_with_previous_state, time_step))
+
+    
+    #Now, run the game from the given timestep
+    self._env.set_state(time_step.observation['observation'])
+    num_episodes = 0
+    while num_episodes == 0:
+      action_step = self.policy.action(time_step, policy_state)
       next_time_step : ts.TimeStep = self.env._step(action_step.action, save = True)
 
       # When using observer (for the purpose of training), only the previous
@@ -119,19 +183,36 @@ class ShieldedDriver(driver.Driver):
           time_step, action_step_with_previous_state, next_time_step)
 
       num_episodes += np.sum(traj.is_boundary())
-      num_steps += np.sum(~traj.is_boundary())
 
       time_step = next_time_step
       policy_state = action_step.state
-      buffer.append(traj)
 
-    traj = self.shield_driver.verify_trajectory(buffer)
-
-    for t in traj:
-      for observer in self._transition_observers:
-        observer((time_step, action_step_with_previous_state, next_time_step))
       for observer in self.observers:
-        observer(t)
-
-
+        observer(traj)
+      
     return time_step, policy_state
+
+  def verify_trajectory(self, traj: List[trajectory.Trajectory], safe_moves = [1,3]):
+    #print("VERIFY")
+    num_redone = 0
+    for i in range(0, len(traj) - 1):
+      #if i % 25 == 0:
+        #print(str(i) + "/" + str(len(traj)))
+      transition = traj[i]
+      result = traj[i+1]
+      if (transition.action in safe_moves and i > 50):
+        self._env.set_state(transition[1]['observation'])
+        new_action = 2 #np.random.choice(self.first_actions, p=[0.0, 1.0])
+        r1 = self._env._step(new_action)
+        r1 = self._env._step(1)
+
+        better = r1.observation['observation'].flatten().prod()
+        worse = result[1]['observation'].flatten().prod()
+
+        if (better <= worse):
+            prev_trajectory = traj[:i+1]
+            self.run_from_timestep(2, trajectory.to_transition(transition[1]), prev_trajectory)
+            num_redone += 1
+    
+    print("Replayed " + str(num_redone))
+    return traj

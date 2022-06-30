@@ -5,6 +5,7 @@
         <script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
         <script src="manual.js"></script>
         <script src="connection.js"></script>
+        <script src="video.js"></script> 
     </head>
     <body>
         <div class="game_grid_container" id="grid_container">
@@ -46,6 +47,15 @@
                 <button id="left" disabled>Left</button><span class="invisible">Up </span><button id="right" disabled>Right</button>
                 <br>
                 <span class="invisible">Left</span><button id="down" disabled>Down</button>
+            </div>
+            <br>
+            <div>
+                Video mode:<br>
+                Speed:
+                <input type="range" min="1" max="100" value="50" id="speedSlider"><br>
+                <input type="checkbox" id="startPosition" checked>Start from first timestep<br>
+                <button id="startVideo">Start Video</button> 
+                <button id="stopVideo">Stop Video</button>
             </div>
         </div>  
         <div class="game_episodes_container">

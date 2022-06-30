@@ -157,6 +157,9 @@ function selectTimestep(index : number, update = false, first = false) {
         gridcontainer.insertBefore(buildGridUIElement(gameMap[index].state, gameMap[index].tileAdded), gridcontainer.firstChild);
 
         newcurrent.parentElement.scroll(0, newcurrent.offsetTop - 55);
+        if (index == numtimesteps - 1) {
+            document.getElementById("game_grid").style.border = "2px solid red";
+        }
     }
     if (update) {
         currentTimestep = index;
@@ -213,6 +216,13 @@ window.onload = function() {
     document.getElementById("down").addEventListener("click", () => {
         manual(Move.DOWN);
     });
+
+    document.getElementById("startVideo").addEventListener("click", () => {
+        startVideo();
+    });
+    document.getElementById("stopVideo").addEventListener("click", () => {
+        stopVideo();
+    })
 
     document.body.addEventListener('keydown', function(event) {
         if (!document.getElementById("override").checked) {

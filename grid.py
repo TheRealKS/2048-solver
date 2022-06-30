@@ -184,11 +184,14 @@ class Grid2048():
         def monotone_decreasing(lst):
             pairs = zip(lst, lst[1:])
             return all(itertools.starmap(operator.ge, pairs))
-        
+
         h = np.count_nonzero(list(map(monotone_decreasing, self.cells)))
         v = np.count_nonzero(list(map(monotone_increasing, self.cells.T)))
 
-        return (h + v) / 0.08
+        return (h + v), h, v
+
+    def isRowLocked(self, r: int):
+        return (np.count_nonzero(self.cells[r]) == 4 and self.cells[r][0] != self.cells[r][1] and self.cells[r][1] != self.cells[r][2] and self.cells[r][2] != self.cells[r][3])
 
     def highestTile(self):
         return self.cells.max()

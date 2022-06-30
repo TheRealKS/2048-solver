@@ -43,7 +43,8 @@ class Game2048PyEnv(ShieldedEnvironment):
         'observation': array_spec.BoundedArraySpec(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float('inf'), name='board'),
         'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_, name='legal'),
         'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32, name='new_tile'),
-        'mergeable': array_spec.ArraySpec(shape=(), dtype=np.int32, name='mergeable')
+        'mergeable': array_spec.ArraySpec(shape=(), dtype=np.int32, name='mergeable'),
+        'strategySwitchSuitable': array_spec.ArraySpec(shape=(), dtype=np.bool_, name='strategySwitchSuitable')
     }
 
     self._previous_state : Grid2048 = None
@@ -63,7 +64,8 @@ class Game2048PyEnv(ShieldedEnvironment):
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
         'new_tile': np.array([-1,-1], dtype=np.int32),
-        'mergeable': np.array(0, dtype=np.int32)
+        'mergeable': np.array(0, dtype=np.int32),
+        'strategySwitchSuitable': np.array(False, dtype=np.bool_)
     } 
     return ts.restart(returnspec)
 
@@ -79,8 +81,7 @@ class Game2048PyEnv(ShieldedEnvironment):
     prevstatescore = self._state.getStateScore()
 
     r = np.double(self._state.performActionIfPossible(action))
-    newscore = self._state.getStateScore()
-    red = (newscore - prevstatescore) / 100
+    newscore, hscore, vscore = self._state.getStateScore()
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
@@ -91,10 +92,14 @@ class Game2048PyEnv(ShieldedEnvironment):
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
         'new_tile': np.array(poss, dtype=np.int32),
-        'mergeable': np.array(self.parseMergeableTiles(m), dtype=np.int32)
+        'mergeable': np.array(self.parseMergeableTiles(m), dtype=np.int32),
+        'strategySwitchSuitable': np.array(self._state.isRowLocked(3), dtype=np.bool_)
     }
     
-    r *= (newscore / 100)
+    if (returnspec['strategySwitchSuitable'] and action != Move.UP):
+      r *= (vscore + 4)
+    else:
+      r *= newscore
 
     if (t):
         return ts.transition(returnspec, reward=r)
@@ -125,9 +130,6 @@ class Game2048PyEnv(ShieldedEnvironment):
     return np.logical_not(new_legal_moves)
 
   def parseMergeableTiles(self, tiles):
-    new_mergeable = 0
     indices = tuple(zip(*tiles))
     new_set = self._state.cells[indices]
-    new_mergeables = new_set.sum()
-    new_mergeable = new_mergeables - (new_mergeables / 2)
-    return math.floor(new_mergeable)
+    return new_set.sum()

@@ -33,7 +33,6 @@ from driver_shielded import ShieldedDriver
 from move import Move
 from shield_driver import ShieldDriver
 from shield_driver_episode import ShieldDriverEpisode
-from shield_driver_replay import ShieldDriverReplay
 
 def compute_avg_return(environment, policy, num_episodes=10):
 
@@ -56,7 +55,7 @@ def splitter_fun(obs):
     return obs['observation'], obs['legal_moves']
 
 
-num_iterations = 100 # @param {type:"integer"}
+num_iterations = 1 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
 replay_buffer_capacity = 20000 # @param {type:"integer"}
 
@@ -126,7 +125,7 @@ replay_buffer_signature = tensor_spec.add_outer_dim(
 prot_table = reverb.Table(
     table_name,
     max_size=100000,
-    sampler=reverb.selectors.Prioritized(priority_exponent=0.8),
+    sampler=reverb.selectors.Uniform(),
     remover=reverb.selectors.Fifo(),
     rate_limiter=reverb.rate_limiters.MinSize(1),
     signature=replay_buffer_signature)
@@ -176,28 +175,9 @@ shield_agent.train_step_counter.assign(0)
 avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
 returns = [avg_return]
 
-time_step = train_py_env.reset()
-
-policy_u = py_tf_eager_policy.PyTFEagerPolicy(
-    tf_agent.collect_policy, use_tf_function=True)
-
-shield_driver = ShieldDriverReplay(
-  train_shield_pyenv,
-  None
-)
-
-# Create a driver to collect experience.
-collect_driver = ShieldedDriver(
-    train_py_env,
-    shield_agent,
-    None,
-    policy_u,
-    [rb_observer_prot],
-    max_episodes=1)
-
 ds = replay_buffer_prot.as_dataset(
     num_parallel_calls=3,
-    sample_batch_size=128,
+    sample_batch_size=64,
     num_steps=2).prefetch(3)
 
 ds_shield = replay_buffer_shield.as_dataset(
@@ -207,6 +187,28 @@ ds_shield = replay_buffer_shield.as_dataset(
 
 iterator = iter(ds)
 it_shield = iter(ds_shield)
+
+time_step = train_py_env.reset()
+
+policy_u = py_tf_eager_policy.PyTFEagerPolicy(
+    tf_agent.collect_policy, use_tf_function=True)
+
+shield_driver = ShieldDriverEpisode(
+  train_shield_pyenv,
+  policy_u,
+  [rb_observer_shield],
+  max_episodes = 1
+)
+
+# Create a driver to collect experience.
+collect_driver = ShieldedDriver(
+    train_py_env,
+    shield_agent,
+    shield_driver,
+    it_shield,
+    policy_u,
+    [rb_observer_prot],
+    max_episodes=1)
 
 for _ in range(num_iterations):
   time_step = train_py_env.reset()

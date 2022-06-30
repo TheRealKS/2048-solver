@@ -20,20 +20,18 @@ from tf_agents.typing import types
 from GameEnvTF import Game2048PyEnv
 
 from ShieldEnvTF import Game2048ShieldPyEnv
+from driver_shielded import ShieldedDriver
 from grid import Grid2048
 from shieldenvironment import ShieldedEnvironment
 
 
-class ShieldDriver():
+class ShieldDriverReplay():
   """A driver that runs a python policy in a python environment."""
 
   def __init__(
       self,
       env: Game2048ShieldPyEnv,
-      policy: py_policy.PyPolicy,
-      observers: Sequence[Callable[[trajectory.Trajectory], Any]],
-      transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
-                                                       Any]]] = None,
+      driver: ShieldedDriver,
       max_steps: Optional[types.Int] = 5,
       max_episodes: Optional[types.Int] = None,
       first_actions : Optional[List] = [0,2]):
@@ -48,8 +46,10 @@ class ShieldDriver():
     self._max_episodes = max_episodes or np.inf
     self.first_actions = first_actions
     self._env = env
+    self.driver = driver
 
-  def verify_trajectory(self, traj: List[trajectory.Trajectory], env : ShieldedEnvironment = None, safe_moves = [1,3]):
+  @staticmethod
+  def verify_trajectory(self, traj: List[trajectory.Trajectory], driver : ShieldedDriver, env : ShieldedEnvironment = None, safe_moves = [1,3]):
     if (env == None):
       state = Grid2048()
       state.cells = traj[0][1]['observation']
@@ -60,21 +60,11 @@ class ShieldDriver():
       result = traj[i+1]
       if (transition.action in safe_moves and i > 50):
         env.set_state(transition[1]['observation'])
-        state_score_before = env.get_state().getStateScore()
         new_action = 2 #np.random.choice(self.first_actions, p=[0.0, 1.0])
         r1 = env._step(new_action)
-        state_score_after = env.get_state().getStateScore()
-        if (r1.observation['mergeable'] >= result[1]['mergeable'] or r1.reward > transition.reward):
-          pred = traj[i]
-          pred = pred.replace(action = np.array(new_action, dtype=np.int32))
-          pred = pred.replace(reward = np.array(r1.reward))
-          pred = pred.replace(discount = np.array(0.9, dtype=np.float32))
-          traj[i] = pred
-          pred = traj[i+1]
-          pred = pred.replace(observation=r1.observation)
-          traj[i+1] = pred
-        else:
-          transition[1]['legal_moves'][new_action] = False
-          traj[i] = traj[i].replace(observation=transition[1])
 
+        if (r1.observation['mergeable'] >= result[1]['mergeable']):
+            prev_trajectory = traj[:1]
+            driver.run_from_timestep(r1, prev_trajectory)
+    
     return traj
