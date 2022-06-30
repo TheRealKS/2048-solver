@@ -57,23 +57,24 @@ class ShieldDriver():
     
     for i in range(0, len(traj) - 1):
       transition = traj[i]
-      if (transition.action in safe_moves and i > 15):
+      result = traj[i+1]
+      if (transition.action in safe_moves and i > 50):
         new_action = np.random.choice(self.first_actions, p=[0.2, 0.8])
         env.set_state(transition[1]['observation'])
         r1 = env._step(new_action)
-        reward_new = r1.reward / r1.observation['observation'].mean()
-        reward_old = transition.reward / transition[1]['observation'].mean()
-        if (reward_new == 0 and reward_old == 0):
-          if (r1.observation['mergeable'] > transition[1]['mergeable']):
-            #replace
-              traj[i].replace(action = np.array(new_action))
-              traj[i].replace(reward = np.array(r1))
-              traj[i].replace(discount = np.array(0.2))
-        elif (reward_new - reward_old >= 2.0):
-              traj[i].replace(action = np.array(new_action))
-              traj[i].replace(reward = np.array(r1))
-              traj[i].replace(discount = np.array(0.2))
-        # if (r1.reward > transition.reward):
+        reward_new = max(0, r1.reward - r1.observation['observation'].mean())
+        reward_old = max(0, transition.reward - transition[1]['observation'].mean())
+        if (r1.observation['mergeable'] > result[1]['mergeable']):
+          #replace
+            traj[i].replace(action = np.array(new_action))
+            traj[i].replace(reward = np.array(r1.reward))
+            traj[i].replace(discount = np.array(0.5))
+            traj[i+1].replace(observation=r1.observation)
+        else:
+          transition[1]['legal_moves'][new_action] = False
+          traj[i].replace(observation=transition[1])
+
+      # if (r1.reward > transition.reward):
         #   traj[i].replace(action = np.array(new_action))
         #   traj[i].replace(reward = np.array(r1))
         #   traj[i].replace(discount = np.array(0.5))

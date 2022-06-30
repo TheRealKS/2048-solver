@@ -43,7 +43,7 @@ class Game2048PyEnv(ShieldedEnvironment):
         'observation': array_spec.BoundedArraySpec(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float('inf'), name='board'),
         'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_, name='legal'),
         'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32, name='new_tile'),
-        'mergeable': array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=8, name='mergeable')
+        'mergeable': array_spec.ArraySpec(shape=(), dtype=np.int32, name='mergeable')
     }
 
     self._previous_state : Grid2048 = None
@@ -91,17 +91,10 @@ class Game2048PyEnv(ShieldedEnvironment):
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
         'new_tile': np.array(poss, dtype=np.int32),
-        'mergeable': np.array(len(m) / 2, dtype=np.int32)
+        'mergeable': np.array(self.parseMergeableTiles(m), dtype=np.int32)
     }
-
-    if (action == Move.LEFT or action == Move.DOWN):
-      if (r == 0):
-        r = newscore * 0.08
-      r *= (1 + red)
-    else:
-      if (red <= -0.25 or (newscore < 30 and (len(m) / 2) < 2)):
-        r = 0.0
-        returnspec['legal_moves'][action.value] = False
+    
+    r *= (newscore / 100)
 
     if (t):
         return ts.transition(returnspec, reward=r)
@@ -130,3 +123,11 @@ class Game2048PyEnv(ShieldedEnvironment):
         new_legal_moves[move.value] = 0
     
     return np.logical_not(new_legal_moves)
+
+  def parseMergeableTiles(self, tiles):
+    new_mergeable = 0
+    indices = tuple(zip(*tiles))
+    new_set = self._state.cells[indices]
+    new_mergeables = new_set.sum()
+    new_mergeable = new_mergeables - (new_mergeables / 2)
+    return math.floor(new_mergeable)
