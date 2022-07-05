@@ -21,6 +21,7 @@ from grid import Grid2048
 from move import Move
 from shield import findOptimalMove
 from shieldenvironment import ShieldedEnvironment
+from test import parseMergeableTiles
 from util import generateRandomGrid
 
 
@@ -69,43 +70,76 @@ class Game2048PyEnv(ShieldedEnvironment):
     } 
     return ts.restart(returnspec)
 
-  def _step(self, action, save = False):
+  def _step(self, action):
     if self._episode_ended:
       return self.reset()
 
     action = Move(action)
 
-    if (save):
-      self._previous_state = self._state.copy()
+    #Check if the action is safe
 
-    prevstatescore = self._state.getStateScore()
+    
+    
+    #Collect some baseline metrics and backup state
+
+    prevstatescore, prev_hscore, prev_score = self._state.getStateScore()
+    legal_moves_prev, m_prev = self._state.movesAvailableInDirection()
+    prev_state = self._state.copy()
+
+    #Issue naive move and collect metrics for it
 
     r = np.double(self._state.performActionIfPossible(action))
-    newscore, hscore, vscore = self._state.getStateScore()
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
     
     legal_moves, m = self._state.movesAvailableInDirection()
-    legal_moves = self.parseLegalMoves(legal_moves)
-    returnspec = {
-        'observation': self._state.toFloatArray(),
-        'legal_moves': legal_moves,
-        'new_tile': np.array(poss, dtype=np.int32),
-        'mergeable': np.array(self.parseMergeableTiles(m), dtype=np.int32),
-        'strategySwitchSuitable': np.array(self._state.isRowLocked(3), dtype=np.bool_)
-    }
-    
-    if (returnspec['strategySwitchSuitable'] and action != Move.UP):
-      r *= (vscore + 4)
-    else:
-      r *= newscore
+    parsedM = self.parseMergeableTiles(m, self._state.cells)
+    newscore, hscore, vscore = self._state.getStateScore()
 
-    if (t):
-        return ts.transition(returnspec, reward=r)
+    new_naive_state = self._state.copy()
+    
+    #Now that we have the naive move, try the alternative (right)
+
+    self._state = prev_state
+    r_alt = np.double(self._state.performActionIfPossible(action))
+    t_alt, pos_alt = self._state.addRandomTile()
+    poss_alt = [pos_alt[0], pos_alt[1]]
+
+    #If this move led to termination, there's no use doing any work
+
+    returnspec = {
+      'observation': new_naive_state.toFloatArray(),
+      'legal_moves': self.parseLegalMoves(legal_moves),
+      'new_tile': np.array(poss, dtype=np.int32),
+      'mergeable': np.array(parsedM, dtype=np.int32),
+      'strategySwitchSuitable': np.array(False, dtype=np.dtype('bool'))
+    }
+
+    if (t_alt and action in [Move.LEFT, Move.DOWN]):
+      legal_moves_alt, m_alt = self._state.movesAvailableInDirection()
+      parsedM_alt = self.parseMergeableTiles(m_alt, self._state.cells)
+      newscore_alt, hscore_alt, vscore_alt = self._state.getStateScore()
+
+      #Now that we have all the metrics, we can compare the two
+      if (hscore_alt > 0 and parsedM_alt > parsedM):
+        #RIGHT IS BETTER
+
+        returnspec = {
+            'observation': self._state.toFloatArray(),
+            'legal_moves': self.parseLegalMoves(legal_moves_alt),
+            'new_tile': np.array(poss_alt, dtype=np.int32),
+            'mergeable': np.array(parsedM_alt, dtype=np.int32),
+            'strategySwitchSuitable': np.array(True, dtype=np.dtype('bool'))
+        }
+
+        return ts.transition(returnspec, reward=r_alt * newscore_alt, discount=0.5)
+    
+    self._state = new_naive_state
+
+    if (t and len(legal_moves) > 0):
+        return ts.transition(returnspec, reward=r * newscore)
     else:
-        #print('termination')
-        #print(self._state.toIntArray())
         return ts.termination(returnspec, reward=0.0)
 
   def get_state(self):
@@ -129,7 +163,12 @@ class Game2048PyEnv(ShieldedEnvironment):
     
     return np.logical_not(new_legal_moves)
 
-  def parseMergeableTiles(self, tiles):
+  def parseMergeableTiles(self, tiles, grid):
+    if (len(tiles) == 0):
+      return 0
     indices = tuple(zip(*tiles))
-    new_set = self._state.cells[indices]
+    new_set = grid[indices]
     return new_set.sum()
+
+  def collect_metrics(self):
+    pass

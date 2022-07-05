@@ -20,24 +20,65 @@ def arr_eq(a, b):
 
     return True
 
-gridc = np.array([[  8,   0,   0,   0],
- [ 16,  2,  4,   2],
- [  64,  16, 2,  2],
- [  512,   64,   32,   4]])
+def parseMergeableTiles(tiles):
+    if (len(tiles) == 0):
+        return 0
+    indices = tuple(zip(*tiles))
+    new_set = grid.cells[indices]
+    return new_set.sum()
+
+gridc = np.array([[  4,   0,   2,  0],
+                  [ 32,  8,  0,   0],
+                  [  64,  32, 16,  8],
+                  [  256,   128,   32,   16]])
 
 
-#gridc = np.array(list(map(lambda r: list(reversed(r)), gridc)))
-#print(gridc)
 
 grid = Grid2048()
 grid.cells = gridc
-print(grid.getStateScore() * 0.08)
-print(grid.performActionIfPossible(Move.DOWN))
+
+print("---LEFT---")
+r = grid.performActionIfPossible(Move.DOWN)
+print("Reward: " + str(r))
+grid.addRandomTile()
+legal_moves, m = grid.movesAvailableInDirection()
+newscore, hscore, vscore = grid.getStateScore()
+opp_left = (hscore, parseMergeableTiles(m))
+
+print("Legal moves: ", end='')
+print(legal_moves)
+print("Mergeable tiles: ", end='')
+print(m, end='')
+print(" (" + str(len(m) / 2) + " pairs)")
+print("Mergeable score: ", end='')
+print(parseMergeableTiles(m))
+print("Scores: t=" + str(newscore) + ",h=" + str(hscore) + ",v=" + str(vscore))
 print(grid.cells)
-print(grid.getStateScore() * 0.08)
-print(grid.movesAvailableInDirection())
+print("----------\n")
+
 grid.cells = gridc
-print(grid.performActionIfPossible(Move.RIGHT))
+
+print("---RIGHT---")
+r = grid.performActionIfPossible(Move.RIGHT)
+print("Reward: " + str(r))
+grid.addRandomTile()
+legal_moves, m = grid.movesAvailableInDirection()
+newscore, hscore, vscore = grid.getStateScore()
+opp_right = (hscore, parseMergeableTiles(m))
+
+print("Legal moves: ", end='')
+print(legal_moves)
+print("Mergeable tiles: ", end='')
+print(m, end='')
+print(" (" + str(len(m) / 2) + " pairs)")
+print("Mergeable score: ", end='')
+print(parseMergeableTiles(m))
+print("Scores: t=" + str(newscore) + ",h=" + str(hscore) + ",v=" + str(vscore))
 print(grid.cells)
-print(grid.getStateScore() * 0.08)
-print(grid.movesAvailableInDirection())
+print("-----------\n")
+
+diff_score = opp_left[0] - opp_right[0]
+if (opp_right[0] > 0 and opp_right[1] >= opp_left[1]):
+    print("RIGHT IS BETTER")
+else:
+    print("LEFT IS BETTER")
