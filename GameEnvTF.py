@@ -76,10 +76,6 @@ class Game2048PyEnv(ShieldedEnvironment):
 
     action = Move(action)
 
-    #Check if the action is safe
-
-    
-    
     #Collect some baseline metrics and backup state
 
     prevstatescore, prev_hscore, prev_score = self._state.getStateScore()
