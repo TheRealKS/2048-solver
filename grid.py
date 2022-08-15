@@ -142,23 +142,20 @@ class Grid2048():
     """
     Check what moves are available in current state
     """
-    @staticmethod
-    def movesAvailableInState(state):
-        size = len(state)
-
+    def movesAvailableInState(self):
         moves = set()
-        for i in range(0,size):
-            for j in range(0,size):
+        for i in range(0,self._size):
+            for j in range(0,self._size):
                 for r in [-1, 1]:
-                    if 0 <= i+r < size:
-                        if (state[i][j] == state[i+r][j]) and state[i][j] > 0:
+                    if 0 <= i+r < self._size:
+                        if (self.cells[i][j] == self.cells[i+r][j]) and self.cells[i][j] > 0:
                             moves.add(("v",r))
-                        elif state[i+r][j] == 0 and state[i][j] != 0:
+                        elif self.cells[i+r][j] == 0 and self.cells[i][j] != 0:
                             moves.add(("v",r))
-                    if 0 <= j+r < size:
-                        if (state[i][j] == state[i][j+r]) and state[i][j] > 0:
+                    if 0 <= j+r < self._size:
+                        if (self.cells[i][j] == self.cells[i][j+r]) and self.cells[i][j] > 0:
                             moves.add(("h",r))
-                        elif state[i][j+r] == 0 and state[i][j] != 0:
+                        elif self.cells[i][j+r] == 0 and self.cells[i][j] != 0:
                             moves.add(("h", r))
 
         return set(map(lambda m : toMoveEnum(m), moves))
@@ -174,7 +171,7 @@ class Grid2048():
         return newgrid
 
     def isWellOrdered(self):    
-        return self.getStateScore == 8
+        return self.getStateScore()[0] == 8
 
     def getStateScore(self):
         def monotone_increasing(lst):
@@ -189,6 +186,9 @@ class Grid2048():
         v = np.count_nonzero(list(map(monotone_increasing, self.cells.T)))
 
         return (h + v), h, v
+    
+    def getNumZeroRows(self):
+        return len(list(filter(lambda r: r == 0, (map(np.count_nonzero, self.cells)))))
 
     def isRowLocked(self, r: int):
         return (np.count_nonzero(self.cells[r]) == 4 and self.cells[r][0] != self.cells[r][1] and self.cells[r][1] != self.cells[r][2] and self.cells[r][2] != self.cells[r][3])

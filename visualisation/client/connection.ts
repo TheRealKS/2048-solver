@@ -12,6 +12,7 @@ interface Coordinate {
 
 interface GameState {
     move : Move,
+    replaced : boolean,
     tileAdded : Coordinate,
     state : Array<Array<Number>>
 }
@@ -39,9 +40,11 @@ async function read(input) {
     for (var line of lines) {
         var l = line.trim();
         if (l.startsWith("Move")) {
-            let m = l.split(".")[1]
+            let ab = l.split(";")
+            let m = ab[0].split(".")[1]
             state = {
                 move: Move[m],
+                replaced: (ab[1] === "True"),
                 state: undefined,
                 tileAdded: undefined
             };
@@ -82,7 +85,7 @@ function initUI() {
     container.innerHTML = "";
 
     gameMap.forEach(function(val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT, val.replaced));
     });
 
     selectTimestep(0, true, true);
@@ -121,7 +124,7 @@ function buildGridUIElement(grid : Array<Array<Number>>, newtile : Coordinate) {
     return gridel;
 }
 
-function buildTimeStepUIElement(index : number, move : number, corr = true) {
+function buildTimeStepUIElement(index : number, move : number, corr = true, replaced = false) {
     let d = document.createElement("div");
     d.className = "timestep";
     d.id = "timestep_" + index.toString();
@@ -136,6 +139,7 @@ function buildTimeStepUIElement(index : number, move : number, corr = true) {
     }
     d.appendChild(dot);
     d.innerHTML += Move[move];
+    d.innerHTML += replaced ? "; REPLACED" : "";
 
     d.addEventListener("click", function() {
         selectTimestep(index, true)

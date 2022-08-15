@@ -16,24 +16,22 @@ from tf_agents.agents.dqn import dqn_agent
 
 
 from tf_agents.typing import types
-from move import Move
 
 from shieldenvironment import ShieldedEnvironment
 
 
-class ShieldedDriver(driver.Driver):
+class UnshieldedDriver(driver.Driver):
   """A driver that runs a python policy in a python environment."""
 
   def __init__(
       self,
-      env: ShieldedEnvironment,
+      env: py_environment.PyEnvironment,
       policy: py_policy.PyPolicy,
       observers: Sequence[Callable[[trajectory.Trajectory], Any]],
       transition_observers: Optional[Sequence[Callable[[trajectory.Transition],
                                                        Any]]] = None,
       max_steps: Optional[types.Int] = None,
-      max_episodes: Optional[types.Int] = None,
-      safe_moves : Optional[List] = [1,3]):
+      max_episodes: Optional[types.Int] = None):
     """A driver that runs a python policy in a python environment.
 
     **Note** about bias when using batched environments with `max_episodes`:
@@ -74,11 +72,10 @@ class ShieldedDriver(driver.Driver):
       raise ValueError(
           'Either `max_steps` or `max_episodes` should be greater than 0.')
 
-    super(ShieldedDriver, self).__init__(env, policy, observers, transition_observers)
+    super(UnshieldedDriver, self).__init__(env, policy, observers, transition_observers)
     self._max_steps = max_steps or np.inf
     self._max_episodes = max_episodes or np.inf
     self._env = env
-    self.safe_moves = safe_moves
 
   def run(
       self,
@@ -96,8 +93,6 @@ class ShieldedDriver(driver.Driver):
     """
     num_steps = 0
     num_episodes = 0
-    buffer = []
-    env_state_prior = self._env.get_state()
     while num_steps < self._max_steps and num_episodes < self._max_episodes:
       # For now we reset the policy_state for non batched envs.
       if not self.env.batched and time_step.is_first() and num_episodes > 0:
@@ -106,19 +101,14 @@ class ShieldedDriver(driver.Driver):
       action_step = self.policy.action(time_step, policy_state)
 
       next_time_step : ts.TimeStep = self.env._step(action_step.action)
-      sw = next_time_step.observation['strategySwitchSuitable']
 
       action_step_with_previous_state = action_step._replace(state=policy_state)
       traj = trajectory.from_transition(time_step, action_step_with_previous_state, next_time_step)
 
-      #This step was replaced
-      if (sw != action_step.action):
-        action_step = action_step._replace(action=np.array(sw, dtype=np.int32))
-      if (sw != 2):
-        for observer in self._transition_observers:
-          observer((time_step, action_step_with_previous_state, next_time_step))
-        for observer in self.observers:
-          observer(traj)
+      for observer in self._transition_observers:
+        observer((time_step, action_step_with_previous_state, next_time_step))
+      for observer in self.observers:
+        observer(traj)
 
       num_episodes += np.sum(traj.is_boundary())
       num_steps += np.sum(~traj.is_boundary())

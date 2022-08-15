@@ -4,3 +4,5 @@ __pycache__/
 /acme
 /run_*
 /archive
+/*.npy
+/policy_naive

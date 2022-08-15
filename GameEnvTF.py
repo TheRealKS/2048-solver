@@ -21,7 +21,6 @@ from grid import Grid2048
 from move import Move
 from shield import findOptimalMove
 from shieldenvironment import ShieldedEnvironment
-from test import parseMergeableTiles
 from util import generateRandomGrid
 
 
@@ -42,13 +41,14 @@ class Game2048PyEnv(ShieldedEnvironment):
     self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
     self._observation_spec = {
         'observation': array_spec.BoundedArraySpec(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float('inf'), name='board'),
-        'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_, name='legal'),
+        'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.int32, name='legal'),
         'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32, name='new_tile'),
         'mergeable': array_spec.ArraySpec(shape=(), dtype=np.int32, name='mergeable'),
-        'strategySwitchSuitable': array_spec.ArraySpec(shape=(), dtype=np.bool_, name='strategySwitchSuitable')
+        'strategySwitchSuitable': array_spec.ArraySpec(shape=(), dtype=np.int32, name='strategySwitchSuitable')
     }
 
     self._previous_state : Grid2048 = None
+    self.episode_ln = 0
 
   def action_spec(self):    
     return self._action_spec
@@ -59,6 +59,7 @@ class Game2048PyEnv(ShieldedEnvironment):
   def _reset(self):
     self._episode_ended = False
     self._state.cells = self._initial_state_grid.copy()
+    self._episode_ln = 0
     legal, _ = self._state.movesAvailableInDirection()
     legal_moves = self.parseLegalMoves(legal)
     returnspec = {
@@ -66,7 +67,7 @@ class Game2048PyEnv(ShieldedEnvironment):
         'legal_moves': legal_moves,
         'new_tile': np.array([-1,-1], dtype=np.int32),
         'mergeable': np.array(0, dtype=np.int32),
-        'strategySwitchSuitable': np.array(False, dtype=np.bool_)
+        'strategySwitchSuitable': np.array(0, dtype=np.int32)
     } 
     return ts.restart(returnspec)
 
@@ -74,13 +75,21 @@ class Game2048PyEnv(ShieldedEnvironment):
     if self._episode_ended:
       return self.reset()
 
+    self.episode_ln += 1
     action = Move(action)
-
     #Collect some baseline metrics and backup state
 
-    prevstatescore, prev_hscore, prev_score = self._state.getStateScore()
-    legal_moves_prev, m_prev = self._state.movesAvailableInDirection()
+    legal_moves_prev = self._state.movesAvailableInState()
     prev_state = self._state.copy()
+
+    if (action == Move.RIGHT or action == Move.UP):
+      if (Move.DOWN in legal_moves_prev):
+        action = Move.DOWN
+      elif (Move.LEFT in legal_moves_prev):
+        action = Move.LEFT
+    if (action == Move.UP):
+      if (Move.RIGHT in legal_moves_prev):
+        action = Move.RIGHT
 
     #Issue naive move and collect metrics for it
 
@@ -90,51 +99,69 @@ class Game2048PyEnv(ShieldedEnvironment):
     poss = [pos[0],pos[1]]
     
     legal_moves, m = self._state.movesAvailableInDirection()
+    if (Move.UP in legal_moves and len(legal_moves) > 1):
+      legal_moves.remove(Move.UP)
+    if (Move.RIGHT in legal_moves and len(legal_moves) > 1):
+      legal_moves.remove(Move.RIGHT)
+    
     parsedM = self.parseMergeableTiles(m, self._state.cells)
     newscore, hscore, vscore = self._state.getStateScore()
 
     new_naive_state = self._state.copy()
-    
-    #Now that we have the naive move, try the alternative (right)
-
-    self._state = prev_state
-    r_alt = np.double(self._state.performActionIfPossible(action))
-    t_alt, pos_alt = self._state.addRandomTile()
-    poss_alt = [pos_alt[0], pos_alt[1]]
 
     #If this move led to termination, there's no use doing any work
+
+    if (action in [Move.LEFT, Move.DOWN] and Move.RIGHT in legal_moves_prev and self.episode_ln >= 150):
+      self._state = prev_state
+      r_alt = np.double(self._state.performActionIfPossible(Move.RIGHT))
+      t_alt, pos_alt = self._state.addRandomTile()
+      poss_alt = [pos_alt[0], pos_alt[1]]
+      if (t_alt and r_alt >= 0.0):
+        legal_moves_alt, m_alt = self._state.movesAvailableInDirection()
+        parsedM_alt = self.parseMergeableTiles(m_alt, self._state.cells)
+        newscore_alt, hscore_alt, vscore_alt = self._state.getStateScore()
+
+        #Now that we have all the metrics, we can compare the two
+        if (hscore >= hscore_alt and parsedM_alt == parsedM):
+          #SAFE IS BETTER
+          pass
+        else:
+          zero_rows = self._state.getNumZeroRows()
+          if (hscore_alt - zero_rows > 0 and self._state.isRowLocked(3) and parsedM_alt > parsedM):
+            #RIGHT IS BETTER
+
+            if (Move.UP in legal_moves_alt and len(legal_moves_alt) > 1):
+                legal_moves_alt.remove(Move.UP)
+            if (Move.RIGHT in legal_moves_alt and len(legal_moves_alt) > 1):
+              legal_moves_alt.remove(Move.RIGHT)
+
+            returnspec = {
+                'observation': self._state.toFloatArray(),
+                'legal_moves': self.parseLegalMoves(legal_moves_alt),
+                'new_tile': np.array(poss_alt, dtype=np.int32),
+                'mergeable': np.array(parsedM_alt, dtype=np.int32),
+                'strategySwitchSuitable': np.array(2, dtype=np.int32)
+            }
+
+            return ts.transition(returnspec, reward=0.0, discount=0.0)
+
+    self._state = new_naive_state
 
     returnspec = {
       'observation': new_naive_state.toFloatArray(),
       'legal_moves': self.parseLegalMoves(legal_moves),
       'new_tile': np.array(poss, dtype=np.int32),
       'mergeable': np.array(parsedM, dtype=np.int32),
-      'strategySwitchSuitable': np.array(False, dtype=np.dtype('bool'))
+      'strategySwitchSuitable': np.array(action.value, dtype=np.int32)
     }
 
-    if (t_alt and action in [Move.LEFT, Move.DOWN]):
-      legal_moves_alt, m_alt = self._state.movesAvailableInDirection()
-      parsedM_alt = self.parseMergeableTiles(m_alt, self._state.cells)
-      newscore_alt, hscore_alt, vscore_alt = self._state.getStateScore()
-
-      #Now that we have all the metrics, we can compare the two
-      if (hscore_alt > 0 and parsedM_alt > parsedM):
-        #RIGHT IS BETTER
-
-        returnspec = {
-            'observation': self._state.toFloatArray(),
-            'legal_moves': self.parseLegalMoves(legal_moves_alt),
-            'new_tile': np.array(poss_alt, dtype=np.int32),
-            'mergeable': np.array(parsedM_alt, dtype=np.int32),
-            'strategySwitchSuitable': np.array(True, dtype=np.dtype('bool'))
-        }
-
-        return ts.transition(returnspec, reward=r_alt * newscore_alt, discount=0.5)
+    r *= newscore
     
-    self._state = new_naive_state
+    if (action == Move.LEFT or action == Move.DOWN):
+      r *= 2.0
 
     if (t and len(legal_moves) > 0):
-        return ts.transition(returnspec, reward=r * newscore)
+        return ts.transition(returnspec, reward=r)
     else:
         return ts.termination(returnspec, reward=0.0)
 
@@ -153,11 +180,12 @@ class Game2048PyEnv(ShieldedEnvironment):
     self.cells = self._previous_state.cells
 
   def parseLegalMoves(self, legalmoves):
-    new_legal_moves = np.full(4, -float('inf'))
+    new_legal_moves = np.full(4, 0, dtype=np.int32)
     for move in legalmoves:
-        new_legal_moves[move.value] = 0
+        new_legal_moves[move.value] = 1
     
-    return np.logical_not(new_legal_moves)
+    return new_legal_moves
+    #return np.logical_not(new_legal_moves)
 
   def parseMergeableTiles(self, tiles, grid):
     if (len(tiles) == 0):

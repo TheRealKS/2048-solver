@@ -53,7 +53,7 @@ function readFile(file) {
 }
 function read(input) {
     return __awaiter(this, void 0, void 0, function () {
-        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, line, l, m, coords, loosecoords, numbers, lnumbers, lnumbers;
+        var log, strLog, lines, state, buildingArray, arr, _i, lines_1, line, l, ab, m, coords, loosecoords, numbers, lnumbers, lnumbers;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, readFile(input.files[0])];
@@ -69,9 +69,11 @@ function read(input) {
                         line = lines_1[_i];
                         l = line.trim();
                         if (l.startsWith("Move")) {
-                            m = l.split(".")[1];
+                            ab = l.split(";");
+                            m = ab[0].split(".")[1];
                             state = {
                                 move: Move[m],
+                                replaced: (ab[1] === "True"),
                                 state: undefined,
                                 tileAdded: undefined
                             };
@@ -116,7 +118,7 @@ function initUI() {
     var container = document.getElementById("episodes");
     container.innerHTML = "";
     gameMap.forEach(function (val, i) {
-        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT));
+        container.appendChild(buildTimeStepUIElement(i, val.move, val.move == Move.DOWN || val.move == Move.LEFT, val.replaced));
     });
     selectTimestep(0, true, true);
 }
@@ -156,8 +158,9 @@ function buildGridUIElement(grid, newtile) {
     }
     return gridel;
 }
-function buildTimeStepUIElement(index, move, corr) {
+function buildTimeStepUIElement(index, move, corr, replaced) {
     if (corr === void 0) { corr = true; }
+    if (replaced === void 0) { replaced = false; }
     var d = document.createElement("div");
     d.className = "timestep";
     d.id = "timestep_" + index.toString();
@@ -172,6 +175,7 @@ function buildTimeStepUIElement(index, move, corr) {
     }
     d.appendChild(dot);
     d.innerHTML += Move[move];
+    d.innerHTML += replaced ? "; REPLACED" : "";
     d.addEventListener("click", function () {
         selectTimestep(index, true);
     });

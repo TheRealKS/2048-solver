@@ -1,24 +1,25 @@
 from __future__ import absolute_import, division, print_function
+from asyncio import shield
+from audioop import avg
 
 import base64
 from typing import Optional
+from xmlrpc.server import resolve_dotted_attribute
 import numpy as np
-import PIL.Image
 import reverb
+import os
 from tf_agents import utils
 from tf_agents.trajectories.time_step import time_step_spec
-import os
 from datetime import datetime
-
-from GameEnvTF import Game2048PyEnv
+from GameEnvNTF import Game2048NPyEnv
 
 import tensorflow as tf
 
+from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.categorical_dqn import categorical_dqn_agent
 from tf_agents.drivers import py_driver
 from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
-from tf_agents.networks import actor_distribution_network
 from tf_agents.policies import py_tf_eager_policy, epsilon_greedy_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
@@ -28,13 +29,16 @@ from tf_agents.utils import common
 from tf_agents.environments import utils
 from tf_agents.networks import q_network, categorical_q_network
 from GameEvalEnvTF import Game2048EvalPyEnv
-from driver_shielded import ShieldedDriver
+from driver_safe import SafeDriver
+from driver_unshielded import UnshieldedDriver
+from tf_agents.policies.policy_saver import PolicySaver
 
 from move import Move
+from policy_safe_wrapper import PolicySafeWrapper
 from policy_shield_wrapper import PolicyShieldWrapper
 
 def compute_avg_return(environment, policy, num_episodes=10, record = False):
-  pol = PolicyShieldWrapper(policy, environment)
+  pol = PolicySafeWrapper(policy, environment)
   avg_return, avg_len, b, wrun, runs = pol.run(num_episodes, record)
   if (record):
     return avg_return.numpy()[0], avg_len, b, wrun, runs
@@ -46,7 +50,7 @@ def splitter_fun(obs):
 
 num_iterations = 1000 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
-replay_buffer_capacity = 5000 # @param {type:"integer"}
+replay_buffer_capacity = 10000 # @param {type:"integer"}
 
 fc_layer_params = (128,)
 
@@ -56,11 +60,10 @@ num_eval_episodes = 10 # @param {type:"integer"}
 eval_interval = 25 # @param {type:"integer"}
 
 
-env = Game2048PyEnv()
+env = Game2048NPyEnv()
 utils.validate_py_environment(env, episodes=5)
 
-
-train_py_env = Game2048PyEnv()
+train_py_env = Game2048NPyEnv()
 eval_py_env = Game2048EvalPyEnv()
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
@@ -71,8 +74,7 @@ train_step_counter = tf.Variable(0)
 
 network_prot = categorical_q_network.CategoricalQNetwork(
 				train_env.time_step_spec().observation['observation'],
-				train_env.action_spec(),
-        fc_layer_params=fc_layer_params)
+				train_env.action_spec())
 
 tf_agent = categorical_dqn_agent.CategoricalDqnAgent(
     train_env.time_step_spec(),
@@ -82,7 +84,7 @@ tf_agent = categorical_dqn_agent.CategoricalDqnAgent(
     target_update_period=50,
     n_step_update=2,
     min_q_value=-1.0,
-    max_q_value=2048.0,
+    max_q_value=2048,
     td_errors_loss_fn=common.element_wise_huber_loss,
     train_step_counter=train_step_counter,
     observation_and_action_constraint_splitter=splitter_fun,
@@ -97,7 +99,7 @@ tf_agent._collect_policy = epsilon_greedy_policy.EpsilonGreedyPolicy(
 eval_policy = tf_agent.policy
 collect_policy = tf_agent.collect_policy
 
-table_name = 'prot_table'
+table_name = 'protnaive_table'
 replay_buffer_signature = tensor_spec.from_spec(
       tf_agent.collect_data_spec)
 replay_buffer_signature = tensor_spec.add_outer_dim(
@@ -106,11 +108,10 @@ replay_buffer_signature = tensor_spec.add_outer_dim(
 prot_table = reverb.Table(
     table_name,
     max_size=replay_buffer_capacity,
-    sampler=reverb.selectors.Prioritized(priority_exponent=0.8),
+    sampler=reverb.selectors.Prioritized(0.8),
     remover=reverb.selectors.Fifo(),
     rate_limiter=reverb.rate_limiters.MinSize(1),
     signature=replay_buffer_signature)
-    #max_times_sampled=3)
 
 reverb_server = reverb.Server([prot_table])
 
@@ -120,6 +121,7 @@ replay_buffer_prot = reverb_replay_buffer.ReverbReplayBuffer(
     sequence_length=3,
     local_server=reverb_server)
   
+
 rb_observer_prot = reverb_utils.ReverbAddTrajectoryObserver(
   replay_buffer_prot.py_client,
   table_name,
@@ -141,7 +143,7 @@ policy_u = py_tf_eager_policy.PyTFEagerPolicy(
     tf_agent.collect_policy, use_tf_function=True)
 
 # Create a driver to collect experience.
-collect_driver = ShieldedDriver(
+collect_driver = SafeDriver(
     train_py_env,
     policy_u,
     [rb_observer_prot],
@@ -150,7 +152,7 @@ collect_driver = ShieldedDriver(
 ds = replay_buffer_prot.as_dataset(
     num_parallel_calls=3,
     sample_batch_size=64,
-    num_steps=3).prefetch(1)
+    num_steps=3).prefetch(3)
 
 iterator = iter(ds)
 
@@ -167,14 +169,14 @@ for _ in range(num_iterations):
   losses.append(train_loss.loss.numpy())
 
   """   # Get the priorities and update.
-  priorities = tf.abs(train_loss.extra.td_error)
-  priorities = tf.cast(priorities, dtype=tf.float64)
-  keys = extra.key[:,0]
-  replay_buffer_prot.tf_client.update_priorities(
-          'prot_table',
-          keys,
-          priorities) """
-
+    priorities = tf.abs(train_loss.extra.td_error)
+    priorities = tf.cast(priorities, dtype=tf.float64)
+    keys = extra.key[:,0]
+    replay_buffer_prot.tf_client.update_priorities(
+            'protnaive_table',
+            keys,
+            priorities)
+  """
   step = tf_agent.train_step_counter.numpy()
 
   if step % log_interval == 0:
@@ -194,7 +196,7 @@ for _ in range(num_iterations):
 
 print("Done, evaluating strategy")
 
-fname = "run_shield_" + str(num_iterations) + "_" + datetime.now().strftime("%d-%b-%Y-(%H:%M:%S)")
+fname = "run_naive_" + str(num_iterations) + "_" + datetime.now().strftime("%d-%b-%Y-(%H:%M:%S)")
 os.mkdir(fname)
 
 np_ret = np.array(returns)

@@ -2,28 +2,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import abc
-from typing import Tuple
-import tensorflow as tf
 import numpy as np
 
 from tf_agents.environments import py_environment
-from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
-from tf_agents.environments import utils
 from tf_agents.specs import array_spec
-from tf_agents.environments import wrappers
-from tf_agents.environments import suite_gym
 from tf_agents.trajectories import time_step as ts
 
 from grid import Grid2048
 from move import Move
-from shield import findOptimalMove
-from shieldenvironment import ShieldedEnvironment
 from util import generateRandomGrid
 
 
-class Game2048ShieldPyEnv(ShieldedEnvironment):
+class Game2048RPyEnv(py_environment.PyEnvironment):
 
   def __init__(self, initial_state : Grid2048 = None):
     super().__init__()
@@ -55,7 +45,8 @@ class Game2048ShieldPyEnv(ShieldedEnvironment):
   def _reset(self):
     self._episode_ended = False
     self._state.cells = self._initial_state_grid.copy()
-    legal_moves = self.parseLegalMoves(self._state.movesAvailableInDirection())
+    av = self._state.movesAvailableInState()
+    legal_moves = self.parseLegalMoves(av)
     returnspec = {
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
@@ -63,29 +54,18 @@ class Game2048ShieldPyEnv(ShieldedEnvironment):
     }
     return ts.restart(returnspec)
 
-  def _step(self, action, save = False):
+  def _step(self, action):
     if self._episode_ended:
       return self.reset()
 
     action = Move(action)
 
-    prevstatescore = self._state.getStateScore()
-
     r = np.double(self._state.performActionIfPossible(action))
-
-    newscore = self._state.getStateScore()
-    if (prevstatescore > newscore):
-        if (prevstatescore - newscore > 40):
-            r = 0.0
-    elif (newscore > prevstatescore):
-        if (newscore - prevstatescore > 40):
-            r *= 2.0
-    red = (newscore - prevstatescore) / 100
 
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
     
-    legal_moves = self._state.movesAvailableInDirection()
+    legal_moves = self._state.movesAvailableInState()
     legal_moves = self.parseLegalMoves(legal_moves)
     returnspec = {
         'observation': self._state.toFloatArray(),
@@ -94,18 +74,9 @@ class Game2048ShieldPyEnv(ShieldedEnvironment):
     }
 
     if (t):
-        return ts.transition(returnspec, reward=red * r)
+        return ts.transition(returnspec, reward=r)
     else:
         return ts.termination(returnspec, reward=0.0)
-
-  def set_state(self, state) -> None:
-      self._state = state
-
-  def getAbsoluteScore(self):
-      return super().getAbsoluteScore()
-
-  def revert(self):
-    self.cells = self._previous_state.cells
 
   def parseLegalMoves(self, legalmoves):
     new_legal_moves = np.full(4, -float('inf'))
