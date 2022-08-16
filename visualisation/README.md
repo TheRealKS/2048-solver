@@ -1,0 +1,2 @@
+# Visualisation
+This folder contains tools for visualising the agents. 3 notebooks used for graphing are present. Under client, a webapp can be found which allows for reading the files created during evaluation of the agents.

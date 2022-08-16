@@ -1,3 +1,8 @@
 __pycache__/
 /.vscode
 /.2048env
+/acme
+/run_*
+/archive
+/*.npy
+/policy_naive

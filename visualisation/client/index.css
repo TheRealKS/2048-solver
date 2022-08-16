@@ -1,9 +1,10 @@
-html,body {
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300&display=swap');html,body {
     width: 100%;
     height: 100%;
     margin: 0;
     overflow: hidden;
     display: flex;
+    font-family: 'Roboto Mono', sans-serif;
 }
 
 .game_grid_container {
@@ -28,10 +29,58 @@ html,body {
     height: 100px;
     text-align: center;
 }
+.tile_low {
+    background-color: lightgray;
+}
+.tile_medlow {
+    background-color: lightyellow;
+}
+.tile_medhigh {
+    background-color: yellow;
+}
+.tile_high {
+    background-color: orange;
+}
 
 .game_episodes {
-    width: 49%;
+    width: 60vw;
     height: 100%;
     float: right;
     padding-top: 1vw;
+    padding-left: 2vw;
+    overflow: scroll;
+    padding-bottom: 1vw;
+    scroll-behavior: smooth;
+}
+
+.timestep {
+    cursor: pointer;
+    border-bottom: 1px solid black;
+    width: 98%;
+}
+.timestep:active{
+    border: 1px solid black;
+}
+.timestep_active {
+    border: 1px solid black;
+}
+
+.dot {
+    border-radius: 50%;
+    height: 1em;
+    width: 1em;
+    display: inline-block;
+    margin-left: 1em;
+}
+.green {
+    background-color: green;
+}
+.red {
+    background-color: red;
+}
+.outline {
+    border: 4px solid black;
+}
+.invisible {
+    color: white;
 }
