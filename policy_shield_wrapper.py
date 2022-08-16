@@ -1,12 +1,12 @@
-from ast import Name
 from datetime import datetime
-import numpy as np
 from tf_agents.policies import TFPolicy
 from move import Move
 
 from shieldenvironment import ShieldedEnvironment
-from util import getMergeableTileValues
 
+"""
+    Wraps a policy and shields it
+"""
 class PolicyShieldWrapper():
     
     def __init__(self, naivepolicy: TFPolicy, env: ShieldedEnvironment) -> None:

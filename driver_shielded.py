@@ -1,5 +1,3 @@
-"""A Driver that steps a python environment using a python policy. A shield is provided and used to override actions."""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -22,7 +20,7 @@ from shieldenvironment import ShieldedEnvironment
 
 
 class ShieldedDriver(driver.Driver):
-  """A driver that runs a python policy in a python environment."""
+  """A driver that runs a python policy in a python environment. This driver is suitable for use with the reverse shield, as it allows for action steps to be replaced."""
 
   def __init__(
       self,
@@ -34,7 +32,7 @@ class ShieldedDriver(driver.Driver):
       max_steps: Optional[types.Int] = None,
       max_episodes: Optional[types.Int] = None,
       safe_moves : Optional[List] = [1,3]):
-    """A driver that runs a python policy in a python environment.
+    """A driver that runs a python policy in a python environment. This driver is suitable for use with the reverse shield, as it allows for action steps to be replaced.
 
     **Note** about bias when using batched environments with `max_episodes`:
     When using `max_episodes != None`, a `run` step "finishes" when

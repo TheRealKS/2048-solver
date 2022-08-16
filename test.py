@@ -1,8 +1,5 @@
-from re import I
 import numpy as np
 from grid import Grid2048
-from shield import criticalSectionValueAfterMove, findCriticalSection
-from util import generateRandomGrid
 from move import Move
 
 def printCells(cells):

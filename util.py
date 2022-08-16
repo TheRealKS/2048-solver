@@ -1,20 +1,16 @@
 """Non tensorflow related functions"""
 
-from heapq import merge
-from unittest import case
-
-from pandas import merge_asof
 from grid import Grid2048
-from move import Move
 import numpy as np
 
-
+"""Generate a random grid configuration"""
 def generateRandomGrid(initial_tiles = 2, strat = False):
     g = Grid2048(newtile_opt=[2,4], strategic=strat)
     for i in range (0,initial_tiles):
         g.addRandomTile()
     return g
 
+"""Return the sum of mergeable tile values. Input should be an array of tuples of mergeable tiles, as returned by the movesAvailableInDirection method"""
 def getMergeableTileValues(mergeabletiles, grid):
     realm = list(filter(lambda r: r[0] >= 0 and r[1] >= 0, mergeabletiles))
     values = [0,0,0,0,0,0]

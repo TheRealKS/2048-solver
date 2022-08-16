@@ -12,7 +12,9 @@ from grid import Grid2048
 from move import Move
 from util import generateRandomGrid
 
-
+"""
+Evaluation environment
+"""
 class Game2048EvalPyEnv(py_environment.PyEnvironment):
 
     def __init__(self, initial_state : Grid2048 = None):

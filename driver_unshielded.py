@@ -7,12 +7,11 @@ from fcntl import F_SEAL_SEAL
 from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
-from tf_agents.drivers import driver, py_driver
+from tf_agents.drivers import driver
 from tf_agents.environments import py_environment
 from tf_agents.policies import py_policy
 from tf_agents.trajectories import time_step as ts
 from tf_agents.trajectories import trajectory
-from tf_agents.agents.dqn import dqn_agent
 
 
 from tf_agents.typing import types

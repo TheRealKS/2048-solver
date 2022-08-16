@@ -1,41 +1,27 @@
 from __future__ import absolute_import, division, print_function
-from asyncio import shield
-from audioop import avg
 
-import base64
-from typing import Optional
-from xmlrpc.server import resolve_dotted_attribute
 import numpy as np
 import reverb
 import os
 from tf_agents import utils
-from tf_agents.trajectories.time_step import time_step_spec
 from datetime import datetime
 from GameEnvNTF import Game2048NPyEnv
 
 import tensorflow as tf
 
-from tf_agents.agents.dqn import dqn_agent
 from tf_agents.agents.categorical_dqn import categorical_dqn_agent
-from tf_agents.drivers import py_driver
-from tf_agents.environments import suite_gym
 from tf_agents.environments import tf_py_environment
 from tf_agents.policies import py_tf_eager_policy, epsilon_greedy_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.specs import tensor_spec
-from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.environments import utils
-from tf_agents.networks import q_network, categorical_q_network
+from tf_agents.networks import categorical_q_network
 from GameEvalEnvTF import Game2048EvalPyEnv
 from driver_safe import SafeDriver
-from driver_unshielded import UnshieldedDriver
-from tf_agents.policies.policy_saver import PolicySaver
 
-from move import Move
 from policy_safe_wrapper import PolicySafeWrapper
-from policy_shield_wrapper import PolicyShieldWrapper
 
 def compute_avg_return(environment, policy, num_episodes=10, record = False):
   pol = PolicySafeWrapper(policy, environment)

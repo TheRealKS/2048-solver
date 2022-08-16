@@ -5,6 +5,10 @@ from move import Move
 from shieldenvironment import ShieldedEnvironment
 from util import getMergeableTileValues
 
+
+"""
+Wraps a policy and makes enforces safety (adherance to strategy)
+"""
 class PolicySafeWrapper():
     
     def __init__(self, naivepolicy: TFPolicy, env: ShieldedEnvironment) -> None:

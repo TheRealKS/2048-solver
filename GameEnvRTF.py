@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from importlib import machinery
 
 import numpy as np
 
@@ -13,7 +12,9 @@ from grid import Grid2048
 from move import Move
 from util import generateRandomGrid
 
-
+"""
+Greedy environemnt
+"""
 class Game2048RPyEnv(py_environment.PyEnvironment):
 
   def __init__(self, initial_state : Grid2048 = None):

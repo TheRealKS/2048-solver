@@ -1,4 +1,4 @@
-"""A Driver that steps a python environment using a python policy. A shield is provided and used to override actions."""
+"""A Driver that steps a python environment using a python policy. Safety is strictly enforced"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -22,7 +22,7 @@ from shieldenvironment import ShieldedEnvironment
 
 
 class SafeDriver(driver.Driver):
-  """A driver that runs a python policy in a python environment."""
+  """A driver that runs a python policy in a python environment. Safety is strictly enforced"""
 
   def __init__(
       self,
