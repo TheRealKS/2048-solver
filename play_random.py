@@ -34,36 +34,44 @@ from tf_agents.policies.policy_saver import PolicySaver
 
 from move import Move
 from policy_shield_wrapper import PolicyShieldWrapper
+from util import getMergeableTileValues
 
 def compute_avg_return(environment, policy, num_episodes=10):
 
   total_return = 0.0
   ln = 0
   biggesttile = 0
+  allvals = []
   for _ in range(num_episodes):
 
     time_step = environment.reset()
     episode_return = 0.0
 
+    vals = np.zeros((6))
     while not time_step.is_last():
       action_step = policy.action(time_step)
       time_step = environment.step(action_step.action)
       episode_return += time_step.reward
       ln += 1
+      vals += getMergeableTileValues(time_step.observation['mergeable'][0].numpy(), time_step.observation['observation'][0].numpy())
     total_return += episode_return
     mtile = time_step.observation['observation'][0].numpy().max()
     if mtile > biggesttile:
       biggesttile = mtile
+    allvals.append(vals / 2)
 
   avg_return = total_return / num_episodes
   avg_ln = ln / num_episodes
+  avg_vals = np.array(allvals).sum(axis=0) / num_episodes
+  avg_vals = np.ceil(avg_vals)
+  print(avg_vals)
   return avg_return.numpy()[0], avg_ln, biggesttile
 
 def splitter_fun(obs):
     return obs['observation'], obs['legal_moves']
 
 
-num_iterations = 1000 # @param {type:"integer"}
+num_iterations = 500 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
 replay_buffer_capacity = 10000 # @param {type:"integer"}
 

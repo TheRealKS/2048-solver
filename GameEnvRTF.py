@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from importlib import machinery
 
 import numpy as np
 
@@ -31,7 +32,8 @@ class Game2048RPyEnv(py_environment.PyEnvironment):
     self._observation_spec = {
         'observation': array_spec.BoundedArraySpec(shape=self._state.shape(), dtype=np.float32, minimum=-1.0, maximum=float('inf'), name='board'),
         'legal_moves': array_spec.ArraySpec(shape=(4,), dtype=np.bool_),
-        'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32)
+        'new_tile': array_spec.ArraySpec(shape=(2,), dtype=np.int32),
+        'mergeable': array_spec.ArraySpec(shape=(16,2), dtype=np.int32, name='mergeable')
     }
 
     self._previous_state : Grid2048 = None
@@ -50,7 +52,8 @@ class Game2048RPyEnv(py_environment.PyEnvironment):
     returnspec = {
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
-        'new_tile': np.array([-1,-1], dtype=np.int32)
+        'new_tile': np.array([-1,-1], dtype=np.int32),
+        'mergeable': np.full((16,2), -1, dtype=np.int32)
     }
     return ts.restart(returnspec)
 
@@ -65,12 +68,18 @@ class Game2048RPyEnv(py_environment.PyEnvironment):
     t, pos = self._state.addRandomTile()
     poss = [pos[0],pos[1]]
     
-    legal_moves = self._state.movesAvailableInState()
+    legal_moves, m = self._state.movesAvailableInDirection()
+    numm = len(m)
+    listm = list(m)
+    for i in range(0,16-numm):
+      listm.append((-1,-1))
+    arr_m = np.array(listm, dtype=np.int32)
     legal_moves = self.parseLegalMoves(legal_moves)
     returnspec = {
         'observation': self._state.toFloatArray(),
         'legal_moves': legal_moves,
-        'new_tile': np.array(poss, dtype=np.int32)
+        'new_tile': np.array(poss, dtype=np.int32),
+        'mergeable': arr_m
     }
 
     if (t):
@@ -84,3 +93,10 @@ class Game2048RPyEnv(py_environment.PyEnvironment):
         new_legal_moves[move.value] = 0
     
     return np.logical_not(new_legal_moves)
+  
+  def parseMergeableTiles(self, tiles, grid):
+    if (len(tiles) == 0):
+      return 0
+    indices = tuple(zip(*tiles))
+    new_set = grid[indices]
+    return new_set.sum()

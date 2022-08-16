@@ -1,8 +1,11 @@
 from ast import Name
+from datetime import datetime
+import numpy as np
 from tf_agents.policies import TFPolicy
 from move import Move
 
 from shieldenvironment import ShieldedEnvironment
+from util import getMergeableTileValues
 
 class PolicyShieldWrapper():
     
@@ -16,7 +19,9 @@ class PolicyShieldWrapper():
         ln = 0
         biggesttile = 0
         runs = []
+        hrun = ""
         wrun = -1
+        sums = 0.0
         for i in range(0, num_episodes):
             if (report_progress):
                 print(str(i + 1) + "/" + str(num_episodes))
@@ -41,10 +46,12 @@ class PolicyShieldWrapper():
                         actn = 2
 
                 safe_next_time_step = self.tfenv.step(actn)
+                safe_actn = actn
                 next_time_step = safe_next_time_step
                 safe_next_state = self.env.get_state()
                 legal_moves = safe_next_time_step.observation['legal_moves']
                 m = safe_next_time_step.observation['mergeable']
+
                 newscore, hscore, vscore = self.env.get_state().getStateScore()
 
                 replaced = False
@@ -53,6 +60,7 @@ class PolicyShieldWrapper():
                     unsafe_next_time_step = self.tfenv.step(2)
                     if (not unsafe_next_time_step.is_last() and unsafe_next_time_step.reward >= 0.0):
                         m_alt = unsafe_next_time_step.observation['mergeable']
+
                         newscore_alt, hscore_alt, vscore_alt = self.env.get_state().getStateScore()
 
                         #Now that we have all the metrics, we can compare the two
@@ -70,16 +78,16 @@ class PolicyShieldWrapper():
                 if (not replaced):
                     self.env.set_state(safe_next_state.cells)
 
-                if (record_run or True):
-                    obs = time_step.observation 
-                    run += str(Move(actn)) + ";" + str(replaced) + "\n"
-                    run += str(obs['new_tile'].numpy()[0]) + "\n"
-                    run += str(obs['observation'][0].numpy()) + "\n"
+                obs = time_step.observation 
+                run += str(Move(actn)) + ";" + str(replaced) + str(Move(safe_actn)) + "\n"
+                run += str(obs['new_tile'].numpy()[0]) + "\n"
+                run += str(obs['observation'][0].numpy()) + "\n"
 
                 time_step = next_time_step
                 ln += 1
                 episode_return += time_step.reward
                 episode_ln += 1
+
             
             total_return += episode_return
             mtile = time_step.observation['observation'][0].numpy().max()
@@ -88,14 +96,36 @@ class PolicyShieldWrapper():
                 wrun = i
             runs.append(run)
 
-            if (biggesttile == 2048):
-                name = "run_2048_.txt"
+            print("TRUE")
+            if (biggesttile == 2048.0):
+                hrun = run
+                name = "run_2048_" + datetime.now().strftime("%d-%b-%Y-(%H:%M:%S)") + ".txt"
                 f = open("./" + name, "w")
-                f.write(run)
+                f.write(hrun)
                 f.flush()
                 f.close()
+
+            sumoftiles = time_step.observation['observation'][0].numpy().sum()
+            sums += sumoftiles
+            
+            sumoftiles = time_step.observation['observation'][0].numpy().sum()
+            sums += sumoftiles
         
         avg_return = total_return / num_episodes
         avg_ln = ln / num_episodes
-        return avg_return, avg_ln, biggesttile, wrun, runs
+        avg_sum = sums / num_episodes
+
+        print(biggesttile)
+        if (biggesttile == 2048.0):
+            print(biggesttile)
+            for i in range(num_episodes):
+                if(i == wrun):
+                    print("TRUE")
+                    name = "run_2048_" + datetime.now().strftime("%d-%b-%Y-(%H:%M:%S)") + ".txt"
+                    f = open("./" + name, "w")
+                    f.write(run)
+                    f.flush()
+                    f.close()
+
+        return avg_return, avg_ln, avg_sum, biggesttile, wrun, runs
             

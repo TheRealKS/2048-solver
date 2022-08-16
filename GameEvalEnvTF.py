@@ -47,7 +47,7 @@ class Game2048EvalPyEnv(py_environment.PyEnvironment):
     def _reset(self):
         self._episode_ended = False
         self._state.cells = self._initial_state_grid.copy()
-        legal, m = self._state.movesAvailableInDirection()
+        legal, _ = self._state.movesAvailableInDirection()
         legal_moves = self.parseLegalMoves(legal)
         returnspec = {
             'observation': self._state.toFloatArray(),
@@ -70,13 +70,13 @@ class Game2048EvalPyEnv(py_environment.PyEnvironment):
         poss = [pos[0],pos[1]]
         
         legal_moves, m = self._state.movesAvailableInDirection()
+        m_p = self.parseMergeableTiles(m, self._state.cells)
         legal_moves = self.parseLegalMoves(legal_moves)
-        parsedM = self.parseMergeableTiles(m, self._state.cells)
         returnspec = {
             'observation': self._state.toFloatArray(),
             'legal_moves': legal_moves,
             'new_tile': np.array(poss, dtype=np.int32),
-            'mergeable': np.array(parsedM, dtype=np.int32),
+            'mergeable': np.array(m_p, dtype=np.int32),
             'strategySwitchSuitable': np.array(0, dtype=np.int32)
         }
 

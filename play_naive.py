@@ -39,16 +39,16 @@ from policy_shield_wrapper import PolicyShieldWrapper
 
 def compute_avg_return(environment, policy, num_episodes=10, record = False):
   pol = PolicySafeWrapper(policy, environment)
-  avg_return, avg_len, b, wrun, runs = pol.run(num_episodes, record)
+  avg_return, avg_len, avg_sum, b, wrun, runs = pol.run(num_episodes, record)
   if (record):
-    return avg_return.numpy()[0], avg_len, b, wrun, runs
-  return avg_return.numpy()[0], avg_len, b
+    return avg_return.numpy()[0], avg_len, avg_sum, b, wrun, runs
+  return avg_return.numpy()[0], avg_len, avg_sum, b
 
 def splitter_fun(obs):
     return obs['observation'], obs['legal_moves']
 
 
-num_iterations = 1000 # @param {type:"integer"}
+num_iterations = 500 # @param {type:"integer"}
 collect_episodes_per_iteration = 1 # @param {type:"integer"}
 replay_buffer_capacity = 10000 # @param {type:"integer"}
 
@@ -184,15 +184,16 @@ for _ in range(num_iterations):
 
   if step == num_iterations:
     avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes, True)
-    tp = (avg_return[0], avg_return[1], avg_return[2])
+    tp = (avg_return[0], avg_return[1], avg_return[2], avg_return[3])
     print('step = {0}: Average Return = {1}'.format(step, tp))
     returns.append(tp)
-    wrun = avg_return[3]
-    runs = avg_return[4]
+    wrun = avg_return[4]
+    runs = avg_return[5]
   elif step % eval_interval == 0:
-    avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
-    print('step = {0}: Average Return = {1}'.format(step, avg_return))
-    returns.append(avg_return)
+    #avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
+    #print('step = {0}: Average Return = {1}'.format(step, avg_return))
+    #returns.append(avg_return)
+    pass
 
 print("Done, evaluating strategy")
 

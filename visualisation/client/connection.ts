@@ -13,6 +13,7 @@ interface Coordinate {
 interface GameState {
     move : Move,
     replaced : boolean,
+    replaces? : Move,
     tileAdded : Coordinate,
     state : Array<Array<Number>>
 }
@@ -44,10 +45,13 @@ async function read(input) {
             let m = ab[0].split(".")[1]
             state = {
                 move: Move[m],
-                replaced: (ab[1] === "True"),
+                replaced: (ab[1].includes("True")),
                 state: undefined,
                 tileAdded: undefined
             };
+            if (state.replaced) {
+                state.replaces = Move[parseInt(ab[1][4])]
+            }
         } else if (l.length == 5 || l.length == 7) {
             let coords = l.substr(1);
             coords = coords.substring(0, coords.length - 1);
