@@ -1,5 +1,5 @@
 # Bachelor Thesis project - 2048 solver
-This repository contains the code for my 2048-solver, which uses a reverse shielding architecture. Also see my bachelor thesis.
+This repository contains the code for my 2048-solver, which uses a reverse shielding architecture. Also see my bachelor thesis at kimas.dev/thesis.
 
 # Running
 Install requirements using requirements.txt. This code will only work UNIX based systems.
